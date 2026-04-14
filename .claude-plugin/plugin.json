@@ -1,7 +1,7 @@
 {
   "name": "ai-crew",
   "description": "Production-grade Claude Code plugin that takes any React Native or TypeScript backend task from idea to PR with one human checkpoint. An Opus team-lead orchestrates the full lifecycle inline, dispatching Sonnet developers and Haiku web-researchers under strict 1-level dispatch.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": {
     "name": "goktug",
     "email": "gktggumus@gmail.com"

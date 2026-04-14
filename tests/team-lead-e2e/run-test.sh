@@ -93,16 +93,17 @@ Please:
 2. Read using-agent-skills/SKILL.md — the team-lead's foundation.
 3. Read spec.md and plan.md.
 4. Skip Phase 1 (Intake), Phase 2 (Research), Phase 3 (Spec), and Phase 4 (Plan). They are already complete.
-5. There is no human checkpoint in this run — proceed directly into Phase 6 (Build).
-6. Walk plan.md in dependency order. For each task T-N, dispatch the developer subagent (subagent_type="developer", model="sonnet") with a reference-based prompt under ~30 lines following the template in the team-lead skill. The developer must read spec.md and plan.md itself.
-7. After each developer dispatch, mark the task's checkbox in progress.md as PASS or FAIL.
-8. Run Phase 7 (Verify): execute the verification commands listed in plan.md.
-9. Run Phase 8 (Review) inline using the four review skills, and document findings in progress.md.
-10. STOP before Phase 9 (Ship). Do NOT commit. Do NOT open a PR. Do NOT push.
+5. The pre-prepared spec.md and plan.md do NOT contain a Section Index or a Task Index. Before Phase 6, generate both (as the tail end of Phase 3 and Phase 4 would) and write them back into spec.md and plan.md. Every developer dispatch in Phase 6 must cite line ranges pulled from those indices.
+6. There is no human checkpoint in this run — proceed directly into Phase 6 (Build).
+7. Walk plan.md in dependency order. For each task T-N, dispatch the developer subagent (subagent_type="developer", model="sonnet") with a reference-based prompt under ~30 lines following the template in the team-lead skill. The prompt MUST cite line ranges — a "Plan task" line range pulled from the Task Index in plan.md, and at least one "Spec refs" line range pulled from the Section Index in spec.md. The developer reads only those cited slices, never the whole spec or plan.
+8. After each developer dispatch, mark the task's checkbox in progress.md as PASS or FAIL.
+9. Run Phase 7 (Verify): execute the verification commands listed in plan.md.
+10. Run Phase 8 (Review) inline using the four review skills, and document findings in progress.md.
+11. STOP before Phase 9 (Ship). Do NOT commit. Do NOT open a PR. Do NOT push.
 
 Constraints:
 - The developer subagent has NO Agent or Task tools — it cannot dispatch further subagents.
-- Reference-based dispatch only — no embedded plan/spec content in the developer prompt.
+- Reference-based dispatch only — no embedded plan/spec content, and no whole-file pointers; every developer prompt cites line ranges from the Task Index and Section Index.
 - Max 3 fix loops total (Verify + Review combined) before reporting failure to me.
 EOF
 )
