@@ -46,7 +46,6 @@ See "Not Doing" in `docs/team-lead-design.md` for full list.
 
 - `reference-projects/agent-skills/` — **base**, will be vendored verbatim
 - `reference-projects/claude-code-setup/` — old ai-crew, conceptually replaced by this rebuild
-- `reference-projects/superpowers/` — Q&A and inline subagent patterns to mirror
 
 ## Plugin file layout (target)
 

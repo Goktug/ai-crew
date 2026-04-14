@@ -1,6 +1,6 @@
 # tests/team-lead-e2e — End-to-end smoke tests for the team-lead orchestrator
 
-Adapted from [`reference-projects/superpowers/tests/subagent-driven-dev/`](../../reference-projects/superpowers/tests/subagent-driven-dev/), with two ai-crew-specific changes:
+Key properties:
 
 1. **Pre-prepared spec.md + plan.md** — the fixture provides them so the team-lead can skip Phases 1–4 (Intake/Research/Spec/Plan) and execute Build → Verify → Review headlessly. Without this, the human checkpoint would block a `claude -p` run.
 2. **Hand-off evidence checks** — after the run, the runner greps the stream-json log for `subagent_type=developer` dispatches, PASS/FAIL replies, and progress.md updates. These verify that the team-lead's strict 1-level dispatch actually happens at runtime.

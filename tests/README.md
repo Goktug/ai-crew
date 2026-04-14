@@ -1,6 +1,6 @@
 # ai-crew tests
 
-Local test suite for the ai-crew plugin. Patterned after [`reference-projects/superpowers/tests/claude-code/`](../reference-projects/superpowers/tests/claude-code/) with two differences:
+Local test suite for the ai-crew plugin. Two key properties:
 
 1. **Hermetic via `--plugin-dir`** — every functional test loads the plugin from this repo via `claude --plugin-dir $PLUGIN_ROOT -p ...`. No global install required, no pollution of the user's installed plugins.
 2. **Two test classes, both run by default.** Static checks catch broken manifests and vendored-content drift; functional tests actually load the plugin into a real `claude -p` session and verify behavior.

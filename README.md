@@ -81,7 +81,6 @@ See [`tests/README.md`](tests/README.md) and [`tests/team-lead-e2e/README.md`](t
 ## Credits
 
 - Vendored skills, agents, references, hooks, and base slash commands are a one-time copy of [`agent-skills`](https://github.com/addyosmani/agent-skills) by Addy Osmani, MIT-licensed.
-- End-to-end test pattern adapted from [`superpowers/tests/subagent-driven-dev`](https://github.com/jessevincent/superpowers) by Jesse Vincent.
 
 ## License
 

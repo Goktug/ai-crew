@@ -3,8 +3,7 @@
 # tests/team-lead-e2e/run-test.sh — end-to-end smoke test of the team-lead
 # orchestrator with subagent hand-off.
 #
-# Adapted from reference-projects/superpowers/tests/subagent-driven-dev/run-test.sh
-# with these ai-crew-specific changes:
+# Key properties:
 #
 # 1. The fixture provides PRE-PREPARED spec.md + plan.md so the team-lead
 #    can skip Intake/Research/Spec/Plan and execute the Build phase. This
