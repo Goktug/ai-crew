@@ -28,6 +28,15 @@ See [docs/team-lead-design.md](docs/team-lead-design.md) — all eight architect
 6. **Plan quality > parallelism.** Atomized DAG with per-task acceptance criteria + verification commands. Sonnet executes mechanically when the plan is right.
 7. **No reviewer subagents.** Opus team-lead does five-axis review inline using agent-skills' four review skills (`code-review-and-quality`, `security-and-hardening`, `code-simplification`, `performance-optimization`).
 8. **Verify/review retry policy: max 3 fix loops** before escalating to user.
+9. **Skills and reference docs are user-facing.** Anything under `skills/`, `references/`, `agents/`, `hooks/`, or `.claude/commands/` ships inside the installed plugin. End users see it without any of this CLAUDE.md, the git history, the `reference-projects/` source material, or the architectural laws above. Never include content that only makes sense to the plugin maintainer:
+   - No "vendored" / "upstream" / "one-time copy" / "reference-projects" language.
+   - No "inspired by" / "ported from" / "adapted from" attribution.
+   - No references to this repo's branches, PRs, or commit workflow.
+   - No mentions of these architectural laws or locked-design rationale.
+   - No meta-commentary like "this plugin," "for v1 scope," or "the maintainer."
+   - No paper-trail reminders like "surgical edits require a commit-message note" — that's maintainer-facing.
+
+   Rule of thumb: read every line in `skills/*/SKILL.md` or `references/*.md` pretending you installed ai-crew from a marketplace five minutes ago. If a line requires prior knowledge of how the plugin was built, rewrite it. When maintainer rules exist (like Law 5 above), they live in this CLAUDE.md only — never in the shipped files.
 
 ## v1 scope (what we are NOT doing)
 
