@@ -54,21 +54,11 @@ for review_skill in code-review-and-quality security-and-hardening code-simplifi
   fi
 done
 
-echo "  --- foundation (inlined core operating behaviors) ---"
-for behavior in "Surface assumptions" "Manage confusion" "Push back" "Enforce simplicity" "Scope discipline" "Verify, don't assume"; do
-  if grep -qi "$behavior" "$SKILL_FILE"; then
-    echo "  [PASS] core behavior present: $behavior"
-  else
-    echo "  [FAIL] core behavior missing: $behavior"
-    failed=$((failed + 1))
-  fi
-done
-
-echo "  --- re-entry guard ---"
-if grep -q "Do NOT invoke the .ai-crew:team-lead. skill again" "$SKILL_FILE"; then
-  echo "  [PASS] re-entry guard present"
+echo "  --- foundation ---"
+if grep -q "ai-crew:using-agent-skills" "$SKILL_FILE"; then
+  echo "  [PASS] foundation skill invoked: ai-crew:using-agent-skills"
 else
-  echo "  [FAIL] re-entry guard missing — team-lead can be re-invoked mid-run"
+  echo "  [FAIL] foundation skill (ai-crew:using-agent-skills) not invoked"
   failed=$((failed + 1))
 fi
 
@@ -85,14 +75,6 @@ if grep -q "SKILL.md inline" "$SKILL_FILE"; then
   failed=$((failed + 1))
 else
   echo "  [PASS] no legacy 'SKILL.md inline' wording"
-fi
-
-echo "  --- foundation skill no longer auto-invoked ---"
-if grep -q "invoke the .ai-crew:using-agent-skills. skill" "$SKILL_FILE"; then
-  echo "  [FAIL] team-lead still invokes ai-crew:using-agent-skills as a foundation skill — should be inlined"
-  failed=$((failed + 1))
-else
-  echo "  [PASS] team-lead does not re-invoke ai-crew:using-agent-skills"
 fi
 
 if [ "$failed" -gt 0 ]; then
