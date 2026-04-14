@@ -1,0 +1,18 @@
+{
+  "name": "g-plugins-marketplace",
+  "owner": {
+    "name": "goktug",
+    "email": "gktggumus@gmail.com"
+  },
+  "metadata": {
+    "description": "Goktug's plugins marketplace — currently distributes the ai-crew Claude Code plugin. Installable from a local path during development; will move to a GitHub source on publication.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "ai-crew",
+      "source": "./",
+      "description": "Opus-orchestrated team-lead workflow with strict 1-level dispatch. Vendored on top of agent-skills' 21-skill workflow library. Single human checkpoint at plan approval; rest of the lifecycle runs end to end."
+    }
+  ]
+}

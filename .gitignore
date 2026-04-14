@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# sed -i.bak backup files (T-06 namespace rewrite uses sed -i '' on macOS;
+# this catches accidental `.bak` from Linux runs)
+*.bak
+
+# node_modules — only created if a fixture starter is npm install'd locally
+node_modules/
+
+# Vendored read-only mirrors of upstream projects. NOT published.
+# These are large (hundreds of MB), are not part of ai-crew, and have their
+# own .git histories. Excluded from this repo entirely.
+reference-projects/
+
+# Local test scratch (the team-lead-e2e runner writes to /tmp/ai-crew-tests/,
+# which is outside the repo, but ignore any local `out/` if a test ever lands here)
+out/
+tmp/
