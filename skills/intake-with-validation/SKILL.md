@@ -1,6 +1,6 @@
 ---
 name: intake-with-validation
-description: Runs structured one-question-at-a-time intake on every new ai-crew run, even when the request seems clear. Use at the start of every team-lead lifecycle to surface hidden assumptions and turn vague ideas into concrete scope, success criteria, and constraints captured directly in spec.md.
+description: Runs structured one-question-at-a-time intake on every ai-crew run, even when the request seems clear. Use at the start of every team-lead lifecycle to surface assumptions and capture scope, success criteria, and constraints directly in spec.md.
 ---
 
 # Intake with Validation

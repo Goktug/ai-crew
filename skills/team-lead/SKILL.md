@@ -1,6 +1,6 @@
 ---
 name: team-lead
-description: Orchestrates a full feature lifecycle from intake to PR with one human checkpoint. Use when the user invokes /team-lead. Use when a task needs the full Intake → Research → Spec → Plan → CHECKPOINT → Build → Verify → Review → Ship pipeline. Use when the work is too large for a single skill but you still want one approval gate, not many.
+description: Orchestrates a full feature lifecycle from intake to PR with one human checkpoint. Use when the user invokes /team-lead, or when a task needs the full Intake → Research → Spec → Plan → Build → Verify → Review → Ship pipeline.
 ---
 
 # Team Lead

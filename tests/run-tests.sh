@@ -95,6 +95,7 @@ static_tests=(
   "test-plugin-manifest.sh"
   "test-namespace-rewrite.sh"
   "test-skill-anatomy.sh"
+  "test-skill-description-length.sh"
   "test-developer-agent.sh"
   "test-web-researcher-agent.sh"
   "test-detect-project-type.sh"

@@ -1,13 +1,13 @@
 ---
 name: mobile-component-testing-with-rntl
-description: Writes React Native component tests with @testing-library/react-native that slot into the test-driven-development RED→GREEN cycle. Use when implementing or modifying any React Native component, screen, or hook in an ai-crew Build phase. RNTL only — no Maestro, no Detox, no end-to-end tooling in v1.
+description: Writes React Native component tests with @testing-library/react-native that slot into the test-driven-development RED→GREEN cycle. Use when implementing or modifying any RN component, screen, or hook.
 ---
 
 # Mobile Component Testing with RNTL
 
 ## Overview
 
-Test React Native components with `@testing-library/react-native`: write a failing test first (RED), make it pass with the minimum implementation (GREEN), then refactor. Query the rendered tree the way a user or an accessibility tool would — by visible text, accessible role, rendered output — never by inspecting component internals. RNTL only in v1: no Maestro, no Detox, no end-to-end tooling. End-to-end coverage is deferred to v2.
+Test React Native components with `@testing-library/react-native`: write a failing test first (RED), make it pass with the minimum implementation (GREEN), then refactor. Query the rendered tree the way a user or an accessibility tool would — by visible text, accessible role, rendered output — never by inspecting component internals. RNTL renders components in a JS-only environment, so tests are fast and do not require a simulator or device.
 
 ## When to Use
 
@@ -19,7 +19,7 @@ Test React Native components with `@testing-library/react-native`: write a faili
 **When NOT to use:**
 - Pure JS/TS utility functions with no React surface — use plain Jest, no RNTL.
 - Backend or Next.js work — use the appropriate web testing skill.
-- End-to-end flows (multi-screen navigation, real device, real network) — out of scope in v1.
+- End-to-end flows (multi-screen navigation, real device, real network) — RNTL renders in isolation and does not exercise navigation or networking; use a dedicated end-to-end testing approach for those.
 
 ## Process
 
@@ -110,7 +110,7 @@ Avoid `getByTestId` unless you have to. A test that needs a testID is often a hi
 
 | Rationalization | Reality |
 |---|---|
-| "I'll add a Maestro flow for this — it's faster than RNTL." | RNTL only in v1. Locked decision. Maestro/Detox/e2e is v2 scope. |
+| "I'll write an end-to-end test for this — it's more realistic." | This skill is for component-level behavior. Component-level RNTL tests are faster, more focused, and run without a device. Use end-to-end tooling only for cross-screen flows that component tests cannot cover. |
 | "I'll snapshot-test the whole tree to save time." | Snapshots rot quickly and hide intent. Write explicit assertions for visible text and behavior. |
 | "I'll skip RNTL for the loading state — too async." | `findBy*` exists exactly for this. Use it. |
 | "I'll use `getByTestId` everywhere — it's simpler." | `getByTestId` bypasses the accessibility tree. Use it only when nothing semantic works. |
@@ -120,7 +120,7 @@ Avoid `getByTestId` unless you have to. A test that needs a testID is often a hi
 
 - About to import from `@testing-library/react` (web) instead of `@testing-library/react-native`.
 - About to write a snapshot test instead of explicit `screen.getByText` assertions.
-- About to add a Maestro flow file alongside an RNTL test.
+- About to add an end-to-end test file when a component-level RNTL test would catch the same regression.
 - About to use `getByTestId` when `getByRole`/`getByText` would work.
 - About to wrap a synchronous query in `waitFor` instead of using `findBy*`.
 - About to skip the failing-test (RED) step because "it's just a small component."
@@ -134,6 +134,6 @@ Before reporting `PASS` on a Build task that uses this skill:
 - [ ] Tests use `@testing-library/react-native` (NOT `@testing-library/react`)
 - [ ] Tests use `screen.getBy*` / `findBy*` queries, not snapshot assertions
 - [ ] No `getByTestId` introduced unless no semantic query works
-- [ ] No Maestro / Detox / e2e file added
+- [ ] No end-to-end test file added — this skill is for component-level RNTL only
 - [ ] `npm test` (or the project's test command) reports green
 - [ ] The RED→GREEN cycle is observable in the developer's commit history (failing test committed first, then implementation)
