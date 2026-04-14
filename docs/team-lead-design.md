@@ -9,7 +9,7 @@
 ## Core Bets
 
 1. **Plan quality is the multiplier.** Spend Opus tokens generously on research, spec, and an atomized DAG with explicit dependencies, per-task acceptance criteria, and per-task verification commands. When the plan is right, implementation becomes mechanical execution that Sonnet can do one task at a time.
-2. **Reference, don't embed.** Subagent prompts carry file paths, task IDs, and skill paths — never embedded content. The subagent reads what it needs itself. Team-lead context stays small even on long runs.
+2. **Reference, don't embed — and cite line ranges.** Subagent prompts carry task IDs, skill paths, and **line-range citations** into `spec.md` / `plan.md` — never embedded content and never whole-file pointers. `spec.md` is finalized with a **Section Index** and `plan.md` with a **Task Index**, so each developer dispatch cites exactly the slices the subagent must read. The subagent opens only those ranges itself. Team-lead context stays small on long runs, and subagent input tokens stay small too.
 3. **Heavy thinking in the Opus team-lead; everything else is parallelizable cheap work.** Opus where judgement matters; Haiku for parallel research; Sonnet for focused, deterministic execution.
 
 ## Recommended Direction
@@ -61,31 +61,38 @@ Three files. That's it. Anything else is created only when a specific run materi
 
 ## Reference-Based Dispatch (the prompting principle)
 
+`spec.md` and `plan.md` are finalized with indices that let every dispatch cite exact line ranges:
+
+- **`spec.md` Section Index** — a `## Section Index` table mapping every `##` / `###` heading to its final line range.
+- **`plan.md` Task Index** — a `## Task Index` table mapping every task ID (`T-NNN`) to its final line range.
+
+Each plan task also records a **`Spec refs:`** field listing the spec-section line ranges that task depends on.
+
 When the team-lead dispatches a subagent, it sends a prompt like:
 
 ```
 Task: T-007 — Add push notification permission flow
 
-Plan:  ~/.claude/ai-crew/runs/2026-04-14-push-notif/plan.md  (find task T-007)
-Spec:  ~/.claude/ai-crew/runs/2026-04-14-push-notif/spec.md
+Plan task:   ~/.claude/ai-crew/runs/2026-04-14-push-notif/plan.md  lines 145-178
+             (read with: sed -n '145,178p' ~/.claude/ai-crew/runs/2026-04-14-push-notif/plan.md)
+Spec refs:   ~/.claude/ai-crew/runs/2026-04-14-push-notif/spec.md  lines 22-41, 67-78
 
 Skills to read first:
   - <plugin>/skills/test-driven-development/SKILL.md
   - <plugin>/skills/incremental-implementation/SKILL.md
   - <plugin>/skills/mobile-component-testing-with-rntl/SKILL.md
 
-Files to touch (per plan):
+Files to touch (per plan task):
   - src/permissions/notifications.ts (new)
   - src/permissions/notifications.test.ts (new)
   - src/screens/Onboarding/PermissionStep.tsx (modify)
 
-Acceptance criteria: read T-007 in plan.md
 Verification command: pnpm test src/permissions/notifications
 
 Return: PASS or FAIL with one-line summary.
 ```
 
-The team-lead's outgoing prompt stays under ~30 lines no matter how big the spec or plan grows. The subagent does the actual reading.
+The team-lead's outgoing prompt stays under ~30 lines no matter how big the spec or plan grows, **and** the subagent's input tokens stay small because it only reads the cited slices — not the whole spec or plan. If `spec.md` or `plan.md` is edited mid-run (e.g. a focused-fix task is inserted during a Verify loop), the team-lead regenerates the Section Index / Task Index in the same edit — stale line ranges would silently misdirect the next dispatch.
 
 ## File Layout
 

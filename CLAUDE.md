@@ -21,7 +21,7 @@ See [docs/team-lead-design.md](docs/team-lead-design.md) — all eight architect
 ## Architectural laws (non-negotiable)
 
 1. **Strict 1-level dispatch.** Subagents never spawn subagents.
-2. **Reference-based dispatch.** Subagent prompts contain file paths, task IDs, and skill paths — never embedded content.
+2. **Reference-based dispatch with line-range citations.** Subagent prompts contain task IDs, skill paths, and **line-range citations** into `spec.md` and `plan.md` — never embedded content and never whole-file pointers. `spec.md` carries a Section Index and `plan.md` carries a Task Index; every developer dispatch includes a `Plan task` range and at least one `Spec refs` range so the subagent reads only the slices it needs.
 3. **Three-file disk artifacts per run:** `spec.md`, `plan.md`, `progress.md`. Nothing else unless materially needed.
 4. **Run state at** `~/.claude/ai-crew/runs/<YYYY-MM-DD-slug>/`.
 5. **Vendored agent-skills SKILL.md content is never edited.** One-time copy, no upstream sync.

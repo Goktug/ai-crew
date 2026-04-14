@@ -34,7 +34,7 @@ claude --plugin-dir /path/to/g-plugins-marketplace
 - **Opus team-lead** runs the full lifecycle: Intake → Research → Spec → Plan → CHECKPOINT → Build → Verify → Review → Ship.
 - **One human checkpoint:** plan approval. Everything else is autonomous.
 - **Strict 1-level dispatch:** the `developer` (Sonnet) and `web-researcher` (Haiku) subagents have no `Agent`/`Task` tools by configuration — they cannot spawn further subagents.
-- **Reference-based prompts:** team-lead's outgoing dispatch is ≤30 lines and contains *paths*, never embedded spec/plan content. Subagent context stays tight on long runs.
+- **Reference-based prompts with line-range citations:** team-lead's outgoing dispatch is ≤30 lines and contains *line ranges into `spec.md` / `plan.md`* — never embedded content, never whole-file pointers. `spec.md` carries a Section Index and `plan.md` carries a Task Index so each dispatch cites exactly the slices the subagent must read. Team-lead and subagent context both stay tight on long runs.
 - **Inline review:** team-lead applies five-axis review across `code-review-and-quality`, `security-and-hardening`, `code-simplification`, and `performance-optimization`. No reviewer subagents.
 - **Run state:** three files at `~/.claude/ai-crew/runs/<YYYY-MM-DD-slug>/`: `spec.md`, `plan.md`, `progress.md`. That's it.
 
