@@ -71,7 +71,7 @@ done
 
 # Skill-specific content guarantees.
 
-# team-lead: 9 lifecycle phases (8 named + CHECKPOINT) + 4 review skills + dispatch template + inlined core behaviors
+# team-lead: 8 lifecycle phases + 4 review skills + dispatch template + inlined core behaviors
 TEAM_LEAD="skills/team-lead/SKILL.md"
 for phase in Intake Research Spec Plan Build Verify Review Ship; do
   if grep -qi "$phase" "$TEAM_LEAD"; then :; else

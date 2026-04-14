@@ -11,7 +11,7 @@ Orchestrate a full feature lifecycle inline, using reference-based dispatch to c
 
 Strict 1-level dispatch: subagents never spawn subagents. The `developer` and `web-researcher` agents have no `Agent` or `Task` tools by configuration.
 
-**Skills are workflows, not reference docs.** The team-lead MUST invoke each sub-skill via the `Skill` tool — not read its SKILL.md with the `Read` tool. Reading a SKILL.md bypasses the skill-invocation ritual (announcement, checklist, running state) that turns a skill from a static doc into an enforced workflow. **Team-lead rule: never use the `Read` tool on any SKILL.md file — always use the `Skill` tool.** This applies at every phase.
+**Skills are workflows, not reference docs.** The team-lead MUST invoke each sub-skill via the `Skill` tool — not read its SKILL.md with the `Read` tool. Reading a SKILL.md bypasses the skill-invocation ritual (announcement, checklist, running state) that turns a skill from a static doc into an enforced workflow. The session-level `using-superpowers` rule is explicit: *"Never use the Read tool on skill files. Use the Skill tool."* Team-lead obeys that rule on every phase.
 
 **Every question to the human follows a shared protocol.** Any message in any phase that asks the human anything — intake Q&A, plan checkpoint revisions, verify/review escalations — follows `references/asking-clarifying-questions.md`: one question per message, multiple choice when bounded, non-trivial decisions surfaced as 2–3 options with trade-offs, lead with a recommendation. This protocol is a reference doc (not a skill), so the team-lead *reads* it with the `Read` tool when it needs a refresher — the "never Read on SKILL.md" rule does not apply to files under `references/`.
 
