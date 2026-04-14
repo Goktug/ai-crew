@@ -20,7 +20,6 @@ Implement a `Counter` component for the starter React Native project. The compon
 - Theming or styling beyond what RNTL needs to find buttons.
 - Integration with `App.tsx` — the starter `App.tsx` stays unchanged.
 - Any animation, gestures, accessibility audit beyond `accessibilityLabel` for the buttons.
-- Installing node_modules (the test runner does NOT install dependencies; the user runs `npm install && npm test` after the team-lead finishes).
 
 ## Success criteria
 
@@ -40,8 +39,12 @@ The team-lead's run is successful when:
 - Reference-based dispatch only — the team-lead's prompt to the developer must be under 30 lines and contain file paths, not embedded spec content.
 - Strict 1-level dispatch — the developer must not dispatch any further subagents.
 - Do NOT touch `App.tsx`, `package.json`, `babel.config.js`, `jest.config.js`, `tsconfig.json`, or `index.js`.
-- Do NOT run `npm install` or `npm test` — those are user-side verification, not part of the team-lead's run in this fixture.
 - Do NOT commit, do NOT open a PR.
+
+### Verification policy
+
+- **Per-task verification (developer subagents during Build):** static greps only — see the Verification command on each plan task. Developers should NOT run `npm install` or `npm test` because each task is small, isolated, and already covered by static checks.
+- **Phase 7 Verify (team-lead, holistic):** the team-lead MAY run `npm install && npm test` as a cross-task verification once all developer dispatches return. This is the team-lead's call, governed by the `Verify, Don't Assume` core operating behavior.
 
 ## Non-goals
 
@@ -52,4 +55,4 @@ The team-lead's run is successful when:
 The user will inspect:
 1. `progress.md` — every task PASS.
 2. `components/Counter.tsx` and `components/Counter.test.tsx` exist.
-3. After running `npm install && npm test` in the project, RNTL tests pass.
+3. If the team-lead did not run `npm install && npm test` itself in Phase 7, run them manually and confirm the RNTL tests pass.

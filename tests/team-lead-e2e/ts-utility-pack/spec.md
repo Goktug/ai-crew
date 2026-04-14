@@ -18,7 +18,6 @@ Implement three pure TypeScript utility functions — `slugify`, `chunk`, and `c
 **Out of scope:**
 - Wiring an `index.ts` barrel export. The functions stay independent.
 - Any shared types, helpers, or test utilities.
-- Installing `node_modules` (the test runner does NOT install dependencies; the user runs `npm install && npm test` after the team-lead finishes).
 - Performance optimization beyond the obvious implementation.
 
 ## Success criteria
@@ -36,8 +35,12 @@ The team-lead's run is successful when:
 - Strict 1-level dispatch — no developer dispatches further subagents.
 - Each task touches only the two files for its own function — no cross-file edits.
 - Do NOT touch `package.json`, `tsconfig.json`, `jest.config.js`, or any configuration file.
-- Do NOT run `npm install` or `npm test` — those are user-side verification, not part of the team-lead's run in this fixture.
 - Do NOT commit, do NOT open a PR.
+
+### Verification policy
+
+- **Per-task verification (developer subagents during Build):** static greps only — see the Verification command on each plan task. Developers should NOT run `npm install` or `npm test` because each task is small, isolated, and already covered by static checks.
+- **Phase 7 Verify (team-lead, holistic):** the team-lead MAY run `npm install && npm test` as a cross-task verification once all developer dispatches return. This is the team-lead's call, governed by the `Verify, Don't Assume` core operating behavior.
 
 ## Non-goals
 
@@ -48,5 +51,5 @@ The team-lead's run is successful when:
 The user will inspect:
 1. `progress.md` — every task PASS.
 2. The six expected files under `src/`.
-3. The stream-json log: three `Task` tool calls dispatched in a single assistant turn (parallel fan-out).
-4. After running `npm install && npm test`, all Jest tests pass.
+3. The stream-json log: three `Agent` tool calls dispatched in a single assistant turn (parallel fan-out).
+4. If the team-lead did not run `npm install && npm test` itself in Phase 7, run them manually and confirm all six Jest tests pass.

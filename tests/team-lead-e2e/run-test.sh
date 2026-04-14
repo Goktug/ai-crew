@@ -187,28 +187,42 @@ largest_fanout=$(jq -s '
   | max // 0
 ' "$LOG_FILE")
 
-# Match PASS:/FAIL: as the developer's one-line return inside any text content.
-pass_replies=$(jq -s '
-  [.[] | select(.type == "user") | .message.content[]?
-   | select(.type == "tool_result")
-   | (.content // [])
-   | (if type == "string" then [{type: "text", text: .}] else . end)
-   | .[]?
-   | select(.type == "text")
-   | .text
-   | select(test("^PASS:"))] | length
+# Count completed developer replies by correlating Agent tool_use_ids to
+# tool_result events. This is robust to whatever wording the developer used
+# (the previous `^PASS:` regex only matched two of three replies because the
+# third said "All 6 tests pass and the verification command succeeds.").
+#
+# total_replies = number of tool_results whose tool_use_id matches an Agent
+#                 dispatch — i.e., subagents that actually completed.
+# explicit_fails = subset whose text contains "FAIL:" or "FAIL " at start.
+# implicit_passes = total_replies - explicit_fails (any non-FAIL reply is
+#                   treated as success, since FAIL is the only deliberate
+#                   non-success signal in the developer's contract).
+total_replies=$(jq -s '
+  ([.[] | select(.type == "assistant") | .message.content[]?
+    | select(.type == "tool_use" and .name == "Agent") | .id]) as $ids
+  | [.[] | select(.type == "user") | .message.content[]?
+     | select(.type == "tool_result")
+     | select(.tool_use_id as $tid | $ids | index($tid) != null)]
+  | length
 ' "$LOG_FILE")
 
-fail_replies=$(jq -s '
-  [.[] | select(.type == "user") | .message.content[]?
-   | select(.type == "tool_result")
-   | (.content // [])
-   | (if type == "string" then [{type: "text", text: .}] else . end)
-   | .[]?
-   | select(.type == "text")
-   | .text
-   | select(test("^FAIL:"))] | length
+explicit_fails=$(jq -s '
+  ([.[] | select(.type == "assistant") | .message.content[]?
+    | select(.type == "tool_use" and .name == "Agent") | .id]) as $ids
+  | [.[] | select(.type == "user") | .message.content[]?
+     | select(.type == "tool_result")
+     | select(.tool_use_id as $tid | $ids | index($tid) != null)
+     | (.content // [])
+     | (if type == "string" then [{type: "text", text: .}] else . end)
+     | .[]?
+     | select(.type == "text")
+     | .text
+     | select(test("^FAIL[: ]"))]
+  | length
 ' "$LOG_FILE")
+
+implicit_passes=$((total_replies - explicit_fails))
 
 echo "--- Check 1: developer subagent dispatched at least once ---"
 if [ "$developer_dispatches" -ge 1 ]; then
@@ -219,11 +233,12 @@ else
 fi
 
 echo ""
-echo "--- Check 2: developer subagent returned PASS/FAIL ---"
-if [ "$((pass_replies + fail_replies))" -ge 1 ]; then
-  echo "  [PASS] developer reported PASS=$pass_replies FAIL=$fail_replies"
+echo "--- Check 2: developer subagents returned a result ---"
+if [ "$total_replies" -ge 1 ]; then
+  echo "  [PASS] $total_replies developer reply/replies received (implicit_pass=$implicit_passes, explicit_fail=$explicit_fails)"
 else
-  echo "  [WARN] no PASS:/FAIL: lines in subagent tool_result text — developer may have used a different format"
+  echo "  [FAIL] no completed developer replies correlated to Agent tool calls"
+  hand_off_failed=$((hand_off_failed + 1))
 fi
 
 echo ""

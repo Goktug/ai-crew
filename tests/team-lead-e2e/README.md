@@ -69,18 +69,22 @@ The runner:
 The runner exits 0 if the **hand-off architecture worked**:
 
 - ≥1 developer subagent dispatch was made by the team-lead
+- ≥1 developer reply was correlated back to an Agent tool call
 - progress.md was updated
-- No nested subagent dispatches (1-level rule held)
+- All Agent calls resolved to a known subagent type (1-level rule held)
+- Parallel fan-out was detected (ts-utility-pack only)
 
-It does NOT verify that the resulting code compiles or that `npm test` passes. That's a manual step:
+It does NOT directly verify that the resulting code compiles or that `npm test` passes — although in practice **the team-lead often runs `npm install && npm test` itself in Phase 7 (Verify)** because its `Verify, Don't Assume` core operating behavior demands real evidence over static checks. Per-task verification commands (in plan.md) stay static for speed; the team-lead's holistic Phase 7 may run the real tests.
+
+If the team-lead did not run npm itself, you can verify manually:
 
 ```bash
-cd /tmp/ai-crew-tests/<timestamp>/team-lead-e2e/rn-counter/project
-npm install     # ~1–2 minutes for RN + RNTL
-npm test        # runs Counter.test.tsx
+cd /tmp/ai-crew-tests/<timestamp>/team-lead-e2e/<fixture>/project
+npm install     # ~1–2 minutes for RN, much faster for ts-utility-pack
+npm test        # runs the developer-authored tests
 ```
 
-If the team-lead's developer dispatches did the right thing, all 3 tests in `components/Counter.test.tsx` will pass.
+Total runtime budget per fixture run: **~3–5 minutes** (mostly waiting for `claude -p` to finish; npm install adds ~1 min if the team-lead invokes it).
 
 ## What this test catches
 
