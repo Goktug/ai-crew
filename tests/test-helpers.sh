@@ -2,8 +2,7 @@
 #
 # test-helpers.sh — assertion + claude-cli helpers for ai-crew tests.
 #
-# Adapted from reference-projects/superpowers/tests/claude-code/test-helpers.sh
-# with two ai-crew-specific changes:
+# Key properties:
 #   1. run_claude automatically passes --plugin-dir <repo-root> so tests are
 #      hermetic and do not require the plugin to be installed globally.
 #   2. The repo root is resolved via PLUGIN_ROOT, exported by run-tests.sh.

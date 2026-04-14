@@ -71,7 +71,7 @@ done
 
 # Skill-specific content guarantees.
 
-# team-lead: 9 lifecycle phases (8 named + CHECKPOINT) + 4 review skills + dispatch template + inlined core behaviors
+# team-lead: 9 lifecycle phases + 4 review skills + dispatch template + using-agent-skills
 TEAM_LEAD="skills/team-lead/SKILL.md"
 for phase in Intake Research Spec Plan Build Verify Review Ship; do
   if grep -qi "$phase" "$TEAM_LEAD"; then :; else
@@ -89,25 +89,10 @@ for review_skill in code-review-and-quality security-and-hardening code-simplifi
 done
 echo "  [PASS] $TEAM_LEAD references all 4 review skills"
 
-# Core operating behaviors are inlined directly into team-lead (no foundation skill
-# dispatch) to prevent re-invocation of team-lead once using-agent-skills returns.
-CORE_BEHAVIORS_FOUND=0
-for behavior in "Surface assumptions" "Manage confusion" "Push back" "Enforce simplicity" "Scope discipline" "Verify, don't assume"; do
-  if grep -qi "$behavior" "$TEAM_LEAD"; then
-    CORE_BEHAVIORS_FOUND=$((CORE_BEHAVIORS_FOUND + 1))
-  fi
-done
-if [ "$CORE_BEHAVIORS_FOUND" -eq 6 ]; then
-  echo "  [PASS] $TEAM_LEAD inlines all 6 core operating behaviors"
+if grep -q "using-agent-skills" "$TEAM_LEAD"; then
+  echo "  [PASS] $TEAM_LEAD loads using-agent-skills foundation"
 else
-  echo "  [FAIL] $TEAM_LEAD only has $CORE_BEHAVIORS_FOUND/6 inlined core operating behaviors"
-  failed=$((failed + 1))
-fi
-
-if grep -q "Do NOT invoke the .ai-crew:team-lead. skill again" "$TEAM_LEAD"; then
-  echo "  [PASS] $TEAM_LEAD has the re-entry guard"
-else
-  echo "  [FAIL] $TEAM_LEAD missing the 're-entry guard' (Do NOT invoke ai-crew:team-lead again)"
+  echo "  [FAIL] $TEAM_LEAD does not reference using-agent-skills"
   failed=$((failed + 1))
 fi
 

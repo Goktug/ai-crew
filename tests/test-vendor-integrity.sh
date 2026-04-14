@@ -26,42 +26,18 @@ fi
 
 failed=0
 
-# Files allowed to diverge from source.
-# Each entry documents WHY the file has a surgical delta.
-#
-#   skills/idea-refine/SKILL.md
-#     Adds a one-paragraph "Question protocol" note pointing
-#     to references/asking-clarifying-questions.md so every
-#     ai-crew skill that asks questions shares the same
-#     one-question-at-a-time + trade-off-led behavior.
-ALLOWED_DIVERGENT=(
-  "skills/idea-refine/SKILL.md"
-)
-
-filter_allowed_divergent() {
-  local input="$1"
-  local output="$input"
-  local path
-  for path in "${ALLOWED_DIVERGENT[@]}"; do
-    output="$(echo "$output" | grep -v "$path differ\$" || true)"
-  done
-  echo "$output"
-}
-
 # For each vendored directory, diff against source and filter "Only in <dest>"
 # lines (those are NEW files, allowed). Any "Files X and Y differ" or
-# "Only in <source>" line is a real failure unless it appears in the
-# ALLOWED_DIVERGENT allowlist above.
+# "Only in <source>" line is a real failure.
 for sub in skills agents references hooks; do
   diff_output="$(diff -rq "$SOURCE/$sub/" "$sub/" 2>&1 || true)"
   bad="$(echo "$diff_output" | grep -v "^Only in $sub" || true)"
-  bad="$(filter_allowed_divergent "$bad")"
   if [ -n "$bad" ]; then
     echo "  [FAIL] $sub/ has unexpected differences against $SOURCE/$sub/:"
     echo "$bad" | sed 's/^/    /'
     failed=$((failed + 1))
   else
-    echo "  [PASS] $sub/ matches source (extras and documented deltas allowed)"
+    echo "  [PASS] $sub/ is byte-identical to source (extras allowed)"
   fi
 done
 
