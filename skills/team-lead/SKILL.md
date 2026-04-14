@@ -66,54 +66,23 @@ The web-researcher uses Haiku and has only `WebFetch, WebSearch, Read, Write` to
 
 Read `<plugin>/skills/spec-driven-development/SKILL.md` inline. Finalize `spec.md`. The team-lead does this work itself — there is no spec subagent.
 
-**Section index (required).** After `spec.md` is finalized, a `## Section Index` table must sit near the top listing every `##` / `###` heading and its final line range in the file. The developer subagent dispatches in Phase 6 will cite these ranges so each subagent only reads the spec slices it needs — not the whole file.
-
-**Do not hand-count line numbers.** Run the helper script to inject (or refresh) the Section Index between the sentinels `<!-- md-index:start --> / <!-- md-index:end -->`:
+As the final step of Phase 3, generate the Section Index so Phase 6 dispatches can cite spec line ranges instead of the whole file. Do not hand-count:
 
 ```bash
 <plugin>/scripts/md-index.sh --sections --inject ~/.claude/ai-crew/runs/<run-id>/spec.md
 ```
 
-Result looks like this:
-
-```
-## Section Index
-
-| Section | Lines |
-|---|---|
-| Background | 9-24 |
-| Requirements | 25-58 |
-| Non-goals | 59-67 |
-| Success criteria | 68-89 |
-```
-
-The spec is frozen at the end of Phase 3. You run `md-index.sh --sections --inject` once, as the final step of Phase 3, and do not touch `spec.md` again for the rest of the run.
-
 ### Phase 4 — Plan
 
 Read `<plugin>/skills/planning-and-task-breakdown/SKILL.md` inline. Write `plan.md` as a task DAG. Per task: ID, dependencies, file paths to touch, acceptance criteria, skill tags, verification command, **independence flag** (for parallelism), and **spec refs** (the spec-section line ranges this task depends on, taken from the Section Index). Plan quality is the multiplier — atomize aggressively so the developer can execute one task at a time without judgment calls.
 
-**Task index (required).** After `plan.md` is finalized, a `## Task Index` table must sit near the top mapping each task ID to its final line range in the file. Each developer dispatch in Phase 6 will cite the task's line range so the subagent reads only its own slice of the plan, not the whole DAG.
-
-**Do not hand-count line numbers.** Run the helper script to inject (or refresh) the Task Index:
+As the final step of Phase 4 (before presenting the plan for checkpoint), generate the Task Index so each Phase 6 dispatch can cite its task's line range:
 
 ```bash
 <plugin>/scripts/md-index.sh --tasks --inject ~/.claude/ai-crew/runs/<run-id>/plan.md
 ```
 
-Result looks like this:
-
-```
-## Task Index
-
-| Task | Lines |
-|---|---|
-| T-001 | 34-58 |
-| T-002 | 59-81 |
-| T-003 | 82-104 |
-```
-
-The script matches `### T-NNN ...` headings. The plan is locked at the Phase 5 checkpoint — you run `md-index.sh --tasks --inject` once, as the final step of Phase 4 (before presenting the plan to the user), and do not touch `plan.md` again for the rest of the run. Verify/Review fix loops dispatch focused-fix developer tasks against the existing DAG; they do not add, renumber, or edit entries in `plan.md`.
+The script matches `### T-NNN ...` headings. Verify/Review fix loops dispatch focused-fix developer tasks against the existing DAG; they do not add, renumber, or edit entries in `plan.md`.
 
 ### Phase 5 — CHECKPOINT (human approval)
 
@@ -129,7 +98,7 @@ After each developer dispatch, the team-lead checks the box for that task in `pr
 
 #### Reference-based dispatch template
 
-The team-lead's outgoing prompt to a `developer` is never longer than ~30 lines and **never embeds spec or plan content — nor points at whole files**. It cites the exact line ranges the subagent needs, pulled from the Task Index in `plan.md` and the Section Index in `spec.md`. Every dispatch MUST contain a `Plan task` line with a range and a `Spec refs` line with at least one range.
+The team-lead's outgoing prompt to a `developer` is ≤30 lines and cites line ranges pulled from the Task Index and Section Index — never embeds spec/plan content, never points at whole files. Every dispatch MUST include a `Plan task` range and at least one `Spec refs` range.
 
 ```
 Task: T-007 — Add push notification permission flow
@@ -234,8 +203,6 @@ Before declaring a run complete:
 - [ ] PR is open with a structured description per `shipping-and-launch`
 - [ ] No subagent dispatched another subagent
 - [ ] No subagent prompt exceeded ~30 lines
-- [ ] `spec.md` contains a Section Index table whose line ranges match current section locations
-- [ ] `plan.md` contains a Task Index table whose line ranges match current task locations
-- [ ] Every developer dispatch cited line ranges (`Plan task` + `Spec refs`) — no dispatch pointed at a whole file
+- [ ] Every developer dispatch cited `Plan task` + `Spec refs` line ranges from the Task Index / Section Index — no whole-file pointers
 - [ ] No reviewer subagent was used
 - [ ] No vendored SKILL.md was edited
