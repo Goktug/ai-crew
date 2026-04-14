@@ -39,6 +39,28 @@ import { render, fireEvent, screen } from '@testing-library/react-native'
 
 Use `screen` queries (`screen.getByText`, `screen.getByRole`) rather than the destructured form returned by `render()` — it keeps test bodies short and makes refactors easier.
 
+### Presence assertions
+
+The examples below use `.toBeTruthy()` as the presence assertion. `getByText` and friends return a truthy React element when they find a match and throw when they don't, so `.toBeTruthy()` reads as "the element exists" and works with a vanilla Jest install.
+
+RNTL also ships a richer matcher `.toBeOnTheScreen()` (and relatives like `.toHaveTextContent`, `.toBeVisible`) in `@testing-library/react-native/extend-expect`. Those require wiring up a Jest setup file:
+
+```js
+// jest.setup.ts
+import '@testing-library/react-native/extend-expect'
+```
+
+and in `jest.config.js`:
+
+```js
+module.exports = {
+  preset: 'react-native',
+  setupFilesAfterEach: ['<rootDir>/jest.setup.ts'],
+}
+```
+
+Use `.toBeOnTheScreen()` only when the project's Jest config is already set up for the extended matchers. Default to `.toBeTruthy()` for portability.
+
 ### Pattern 1 — Render and query by accessible text
 
 For a component that displays a label:
@@ -50,12 +72,12 @@ import { WelcomeBanner } from './WelcomeBanner'
 describe('WelcomeBanner', () => {
   it('shows the user name when provided', () => {
     render(<WelcomeBanner name="Goktug" />)
-    expect(screen.getByText('Welcome, Goktug')).toBeOnTheScreen()
+    expect(screen.getByText('Welcome, Goktug')).toBeTruthy()
   })
 
   it('falls back to a generic greeting when name is empty', () => {
     render(<WelcomeBanner name="" />)
-    expect(screen.getByText('Welcome')).toBeOnTheScreen()
+    expect(screen.getByText('Welcome')).toBeTruthy()
   })
 })
 ```
@@ -88,7 +110,7 @@ import { ProfileScreen } from './ProfileScreen'
 
 it('renders the profile name once loaded', async () => {
   render(<ProfileScreen userId="42" />)
-  expect(await screen.findByText('Goktug Aral')).toBeOnTheScreen()
+  expect(await screen.findByText('Goktug Aral')).toBeTruthy()
 })
 ```
 
@@ -125,6 +147,7 @@ Avoid `getByTestId` unless you have to. A test that needs a testID is often a hi
 - About to wrap a synchronous query in `waitFor` instead of using `findBy*`.
 - About to skip the failing-test (RED) step because "it's just a small component."
 - About to mock the entire `react-native` module.
+- About to use `.toBeOnTheScreen()` or another RNTL-extended matcher without first checking that `@testing-library/react-native/extend-expect` is imported in a Jest setup file. Default to `.toBeTruthy()` unless the project is already wired up for the extended matchers.
 
 ## Verification
 
