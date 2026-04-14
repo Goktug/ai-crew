@@ -11,29 +11,49 @@ Adapted from [`reference-projects/superpowers/tests/subagent-driven-dev/`](../..
 tests/team-lead-e2e/
 ├── README.md            # this file
 ├── run-test.sh          # main runner: scaffolds + runs claude -p + checks hand-off
-└── rn-counter/          # the demo fixture
-    ├── design.md        # high-level requirement
-    ├── spec.md          # detailed spec (pre-filled, lets team-lead skip Phase 3)
-    ├── plan.md          # task DAG (pre-filled, lets team-lead skip Phase 4)
-    ├── scaffold.sh      # creates /tmp project, copies starter + artifacts, git init
-    └── starter/         # minimal React Native + RNTL project files
+├── rn-counter/          # SEQUENTIAL fixture: 3 TDD-chained tasks (T-01 → T-02 → T-03)
+│   ├── design.md
+│   ├── spec.md
+│   ├── plan.md
+│   ├── scaffold.sh
+│   └── starter/         # minimal React Native + RNTL project
+│       ├── package.json
+│       ├── babel.config.js
+│       ├── jest.config.js
+│       ├── tsconfig.json
+│       ├── index.js
+│       ├── App.tsx
+│       └── components/  # empty — team-lead adds Counter.tsx + Counter.test.tsx
+└── ts-utility-pack/     # PARALLEL fixture: 3 independent tasks dispatched in one fan-out
+    ├── design.md
+    ├── spec.md
+    ├── plan.md          # all 3 tasks marked [Independent] in Wave 1
+    ├── scaffold.sh
+    └── starter/         # minimal TypeScript + Jest project
         ├── package.json
-        ├── babel.config.js
-        ├── jest.config.js
         ├── tsconfig.json
-        ├── index.js
-        ├── App.tsx
-        └── components/  # empty — team-lead adds Counter.tsx + Counter.test.tsx here
+        ├── jest.config.js
+        └── src/         # empty — team-lead adds slugify, chunk, clamp + tests
 ```
+
+## Two fixtures, two architectural checks
+
+| Fixture | What it tests | Pass criterion |
+|---|---|---|
+| `rn-counter` | Sequential dispatch through a TDD chain. T-02 depends on T-01, T-03 on T-02. Verifies hand-off works at all. | ≥1 developer dispatch, progress.md updated, no nested dispatches. |
+| `ts-utility-pack` | **Parallel fan-out.** 3 independent tasks at the same DAG depth. Verifies team-lead respects `[Independent]` flags and dispatches multiple developers in a single assistant turn. | All `rn-counter` checks **plus** ≥1 assistant turn must contain ≥2 `Task` tool calls (parallel fan-out detected via jq inspection of stream-json). |
 
 ## Quickstart
 
 ```bash
-# Run the rn-counter end-to-end test
+# Sequential dispatch fixture (RN Counter, 3 TDD-chained tasks)
 ./tests/team-lead-e2e/run-test.sh rn-counter
 
+# Parallel dispatch fixture (TS utility pack, 3 [Independent] tasks)
+./tests/team-lead-e2e/run-test.sh ts-utility-pack
+
 # Use a different plugin dir
-./tests/team-lead-e2e/run-test.sh rn-counter --plugin-dir /path/to/ai-crew
+./tests/team-lead-e2e/run-test.sh ts-utility-pack --plugin-dir /path/to/ai-crew
 ```
 
 The runner:

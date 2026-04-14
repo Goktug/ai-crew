@@ -173,7 +173,45 @@ else
 fi
 
 echo ""
-echo "--- Check 5: token usage ---"
+echo "--- Check 5: parallel fan-out (≥2 Task calls in the same assistant turn) ---"
+# Find assistant turns that contain ≥2 Task tool_use blocks. Each such turn is
+# one parallel fan-out by the team-lead. Requires jq.
+if command -v jq > /dev/null 2>&1; then
+  parallel_turns=$(jq -s '
+    [.[] | select(.type == "assistant")]
+    | map(([.message.content[]? | select(.type == "tool_use" and .name == "Task")] | length))
+    | map(select(. >= 2))
+    | length
+  ' "$LOG_FILE" 2>/dev/null || echo "0")
+  largest_fanout=$(jq -s '
+    [.[] | select(.type == "assistant")]
+    | map(([.message.content[]? | select(.type == "tool_use" and .name == "Task")] | length))
+    | max // 0
+  ' "$LOG_FILE" 2>/dev/null || echo "0")
+  echo "  parallel_turns=$parallel_turns largest_fanout=$largest_fanout"
+
+  # ts-utility-pack: 3 independent tasks → at least one turn must have ≥2 Task calls.
+  # rn-counter: sequential by design → no parallel fan-out expected.
+  if [[ "$TEST_NAME" == "ts-utility-pack" ]]; then
+    if [ "$parallel_turns" -ge 1 ] && [ "$largest_fanout" -ge 2 ]; then
+      echo "  [PASS] parallel fan-out detected ($parallel_turns turn(s) had ≥2 Task calls, largest=$largest_fanout)"
+    else
+      echo "  [FAIL] no parallel fan-out — three independent tasks ran sequentially"
+      hand_off_failed=$((hand_off_failed + 1))
+    fi
+  else
+    if [ "$parallel_turns" -ge 1 ]; then
+      echo "  [INFO] parallel fan-out detected but not required for this fixture"
+    else
+      echo "  [INFO] no parallel fan-out (sequential dispatch — expected for this fixture)"
+    fi
+  fi
+else
+  echo "  [SKIP] jq not installed — cannot inspect message structure"
+fi
+
+echo ""
+echo "--- Check 6: token usage ---"
 if command -v jq > /dev/null 2>&1; then
   jq -s '[.[] | select(.type == "result")] | last | .usage' "$LOG_FILE" 2>/dev/null || echo "(could not parse usage)"
 else
