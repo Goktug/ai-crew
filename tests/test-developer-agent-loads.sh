@@ -19,7 +19,25 @@ prompt='Read the developer agent definition at agents/developer.md inside the lo
 
 failed=0
 
-if output=$(run_claude "$prompt" 90 2>&1); then
+# Run claude; capture output + exit code separately. Exit 124 means the
+# outer timeout fired during SessionEnd hook cleanup (e.g. claude-mem
+# session-complete) after claude had already produced its answer. Treat
+# that as a soft warning and still evaluate the captured content.
+set +e
+output=$(run_claude "$prompt" 180 2>&1)
+exit_code=$?
+set -e
+
+if [ "$exit_code" -eq 124 ]; then
+  echo "  [WARN] claude exited 124 (session-end hook cancelled) — evaluating captured output anyway"
+elif [ "$exit_code" -ne 0 ]; then
+  echo "  [FAIL] claude exited non-zero ($exit_code)"
+  echo "  Output:"
+  echo "$output" | sed 's/^/    /'
+  exit 1
+fi
+
+if true; then
   if echo "$output" | grep -qi "sonnet"; then
     echo "  [PASS] reports model = sonnet"
   else
@@ -62,12 +80,6 @@ if output=$(run_claude "$prompt" 90 2>&1); then
     echo "  Full claude output:"
     echo "$output" | sed 's/^/    /'
   fi
-else
-  exit_code=$?
-  echo "  [FAIL] claude exited non-zero ($exit_code)"
-  echo "  Output:"
-  echo "$output" | sed 's/^/    /'
-  failed=$((failed + 1))
 fi
 
 if [ "$failed" -gt 0 ]; then
