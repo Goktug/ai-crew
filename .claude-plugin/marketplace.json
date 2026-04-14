@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Goktug's plugins marketplace — currently distributes the ai-crew Claude Code plugin. Installable from a local path during development; will move to a GitHub source on publication.",
-    "version": "0.1.3"
+    "version": "0.1.2"
   },
   "plugins": [
     {
