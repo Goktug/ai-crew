@@ -8,4 +8,4 @@ The team-lead skill encodes the full nine-phase lifecycle: Intake → Research �
 
 There is exactly one human checkpoint: the user must approve `plan.md` before any file is written in Build.
 
-Begin by reading `<plugin>/skills/using-agent-skills/SKILL.md` and `<plugin>/skills/team-lead/SKILL.md`, then proceed to Phase 1 (Intake).
+The team-lead skill is responsible for invoking `ai-crew:using-agent-skills` first and then walking every phase via the Skill tool — this wrapper only has to kick it off.
