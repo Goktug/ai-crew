@@ -40,6 +40,13 @@ This forces honesty about what you don't actually know.
 
 Ask ONE question. Wait for the answer. Then ask the next. **Never batch questions.** Batching surfaces fewer disagreements and signals that you don't really care about the answers.
 
+**Every question follows `references/asking-clarifying-questions.md`** — one per message, multiple choice when bounded, 2–3 options with trade-offs for non-trivial decisions, lead with a recommendation. The shared reference doc is the source of truth; the four rules, inlined here for convenience:
+
+1. One question per message (no "and" joining two questions).
+2. Multiple choice > open-ended when the answer space is bounded.
+3. Non-trivial decisions → present 2–3 options with trade-offs, quantified when possible.
+4. Lead with your recommended option and explain why.
+
 Use the canned coverage areas below. Skip a question only if the user has already answered it explicitly in their request — and even then, paraphrase your understanding back as a confirmation question.
 
 ### Step 3 — Canned question set (coverage areas)
@@ -74,7 +81,7 @@ There is **no `intake.md`**. The run-state directory holds exactly three files: 
 
 ### Step 5 — Hand off to spec-driven-development
 
-When the four coverage areas are answered, hand off to the `spec-driven-development` skill. The team-lead reads that skill inline to finalize the rest of `spec.md` (objective, project structure, code style, testing strategy, boundaries).
+When the four coverage areas are answered, hand off to the `spec-driven-development` skill. The team-lead **invokes that skill via the Skill tool** (not the Read tool) to finalize the rest of `spec.md` (objective, project structure, code style, testing strategy, boundaries).
 
 ## Common Rationalizations
 
