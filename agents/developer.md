@@ -64,6 +64,32 @@ PASS: <one sentence describing what now works>
 FAIL: <one sentence with the cause — file:line, failing assertion, or verification command output snippet>
 ```
 
+**The very first token of your reply MUST be `PASS:` or `FAIL:`** — no preamble, no newline, no summary sentence in front of it. The team-lead reads your response by string-matching the first token, so compliance is binary.
+
+Describe the outcome of *your one task*, not the whole test suite. If you implemented `clamp` in `src/clamp.ts`, say so — do not summarise how many total tests pass across the project.
+
+### Good
+
+```
+PASS: clamp implemented in src/clamp.ts; 3 new acceptance tests added and green.
+```
+
+```
+FAIL: src/clamp.ts:14 — returns NaN when value is undefined; acceptance test `clamp handles undefined` is red.
+```
+
+### Bad
+
+```
+All 6 tests pass and the verification command succeeds.
+```
+*Wrong: no `PASS:` prefix, and it summarises the whole suite instead of this one task.*
+
+```
+The clamp function is now implemented and everything works.
+```
+*Wrong: no `PASS:` prefix, no file, no verification evidence.*
+
 No headers, no bullet lists, no thanks, no follow-up suggestions. The team-lead reads your response programmatically.
 
 ## Rules
@@ -76,4 +102,4 @@ No headers, no bullet lists, no thanks, no follow-up suggestions. The team-lead 
 6. Touch only the files the task authorizes; anything broken outside that list is a `FAIL` with the path, not a fix.
 7. You cannot dispatch subagents — you have no `Agent` or `Task` tool. If you wish you did, the design has caught a flaw; return `FAIL` with that as the reason rather than working around it.
 8. One task per dispatch — do not start the next one. The team-lead picks it.
-9. One task in, one line out: `PASS: …` or `FAIL: …`, nothing else.
+9. One task in, one line out: your reply's first token must be `PASS:` or `FAIL:` — nothing else, no preamble, no suite-level summary. **Red flag:** if you're about to describe "all tests pass" or anything about sibling tasks, stop and rewrite the line to describe *this* task's outcome.
