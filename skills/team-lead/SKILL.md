@@ -199,10 +199,7 @@ The team-lead reads these vendored SKILL.md files inline at each phase. `using-a
 | Rationalization | Reality |
 |---|---|
 | "I can skip intake — the request is clear." | Intake is one-question-at-a-time even when the request seems clear. The most expensive bugs come from assumptions you didn't surface. |
-| "Let me embed the plan content in the developer prompt so the subagent doesn't have to read." | This blows up team-lead context on long runs. Reference-based dispatch is the locked design — cite line ranges, not content. |
-| "Pointing at the whole plan.md is fine — the subagent will find the task." | No. Cite the exact task line range from the Task Index. Full-file reads waste tokens and force the subagent to re-discover structure you already have. |
-| "The spec is short — I'll skip the Section Index." | No. The Section Index is required so every dispatch can cite spec line ranges instead of the whole file. One-table cost, reused on every task. |
-| "I need to append a focused-fix task to `plan.md` after the checkpoint so it's tracked." | No. The plan is locked at Phase 5. Verify/Review fix loops dispatch a focused-fix developer against the existing DAG without mutating `plan.md`. Track the fix in `progress.md`, not by editing the plan. |
+| "Let me embed the plan content — or just point at the whole `plan.md` — in the developer prompt." | No. Cite the exact task line range from the Task Index. Embedding blows up team-lead context on long runs; whole-file pointers waste subagent tokens and force it to re-discover structure the Task Index already encodes. |
 | "I'll spawn a reviewer subagent to do the review in parallel." | Not in this plugin. Review is inline by the Opus team-lead across four skills. Locked design decision. |
 | "I'll let the developer subagent dispatch its own helper subagents." | Strict 1-level dispatch. The `developer` and `web-researcher` agents do not have `Agent` or `Task` tools by configuration. |
 | "This fix loop is the 4th retry — one more attempt should do it." | No. Max 3 fix loops total (Verify + Review combined). Escalate to the user. |
