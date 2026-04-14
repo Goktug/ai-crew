@@ -17,6 +17,8 @@ Refines raw ideas into sharp, actionable concepts worth building through structu
 
 This skill is primarily an interactive dialogue. Invoke it with an idea, and the agent will guide you through the process.
 
+**Question protocol:** Questions follow `references/asking-clarifying-questions.md` — one question per message, multiple choice when bounded, non-trivial decisions presented as 2–3 options with trade-offs and a lead recommendation. The "3–5 sharpening questions" below is the total for the phase, not a batch to send in one message.
+
 ```bash
 # Optional: Initialize the ideas directory
 bash /mnt/skills/user/idea-refine/scripts/idea-refine.sh
