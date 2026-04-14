@@ -87,7 +87,7 @@ Result looks like this:
 | Success criteria | 68-89 |
 ```
 
-The script is idempotent — re-running it after any subsequent edit refreshes the block in place with correct line numbers. **If `spec.md` is edited after Phase 3 for any reason (e.g. a Verify loop surfaces a missed constraint), re-run `md-index.sh --sections --inject` in the same edit.** Stale line numbers are worse than no line numbers.
+The spec is frozen at the end of Phase 3. You run `md-index.sh --sections --inject` once, as the final step of Phase 3, and do not touch `spec.md` again for the rest of the run.
 
 ### Phase 4 — Plan
 
@@ -113,7 +113,7 @@ Result looks like this:
 | T-003 | 82-104 |
 ```
 
-The script matches `### T-NNN ...` headings. It is idempotent — re-running it after any subsequent edit refreshes the block in place with correct line numbers. **If `plan.md` is edited after Phase 4 (e.g. a focused-fix task is inserted during a Verify or Review loop), re-run `md-index.sh --tasks --inject` in the same edit** before dispatching the next developer subagent.
+The script matches `### T-NNN ...` headings. The plan is locked at the Phase 5 checkpoint — you run `md-index.sh --tasks --inject` once, as the final step of Phase 4 (before presenting the plan to the user), and do not touch `plan.md` again for the rest of the run. Verify/Review fix loops dispatch focused-fix developer tasks against the existing DAG; they do not add, renumber, or edit entries in `plan.md`.
 
 ### Phase 5 — CHECKPOINT (human approval)
 
@@ -154,8 +154,6 @@ Return: PASS or FAIL with one-line summary.
 ```
 
 The subagent reads only those slices. Team-lead context stays small even on long runs, and the subagent's own input tokens drop because it never reads the whole spec or plan.
-
-**Line-range hygiene.** Before each dispatch, confirm the Task Index and Section Index still match `plan.md` / `spec.md`. If any focused-fix task was inserted mid-run, regenerate both indices before citing ranges — a stale range will send the developer to the wrong slice and look like a mystery bug.
 
 ### Phase 7 — Verify
 
@@ -204,7 +202,7 @@ The team-lead reads these vendored SKILL.md files inline at each phase. `using-a
 | "Let me embed the plan content in the developer prompt so the subagent doesn't have to read." | This blows up team-lead context on long runs. Reference-based dispatch is the locked design — cite line ranges, not content. |
 | "Pointing at the whole plan.md is fine — the subagent will find the task." | No. Cite the exact task line range from the Task Index. Full-file reads waste tokens and force the subagent to re-discover structure you already have. |
 | "The spec is short — I'll skip the Section Index." | No. The Section Index is required so every dispatch can cite spec line ranges instead of the whole file. One-table cost, reused on every task. |
-| "I added a focused-fix task but didn't regenerate the Task Index — it's only a few lines off." | Regenerate the index in the same edit. Stale line ranges silently send developers to the wrong slice and show up as unrelated test failures later. |
+| "I need to append a focused-fix task to `plan.md` after the checkpoint so it's tracked." | No. The plan is locked at Phase 5. Verify/Review fix loops dispatch a focused-fix developer against the existing DAG without mutating `plan.md`. Track the fix in `progress.md`, not by editing the plan. |
 | "I'll spawn a reviewer subagent to do the review in parallel." | Not in this plugin. Review is inline by the Opus team-lead across four skills. Locked design decision. |
 | "I'll let the developer subagent dispatch its own helper subagents." | Strict 1-level dispatch. The `developer` and `web-researcher` agents do not have `Agent` or `Task` tools by configuration. |
 | "This fix loop is the 4th retry — one more attempt should do it." | No. Max 3 fix loops total (Verify + Review combined). Escalate to the user. |
@@ -216,7 +214,7 @@ Stop and reconsider if you notice any of these:
 
 - About to dispatch a developer with > 50 lines of embedded context.
 - About to dispatch a developer without a `Plan task` line range and at least one `Spec refs` line range.
-- About to edit `spec.md` or `plan.md` without regenerating the Section Index / Task Index in the same edit.
+- About to edit `spec.md` after Phase 3 or `plan.md` after Phase 5 — both files are frozen after their phase, full stop.
 - About to skip the plan checkpoint because "the user clearly wants me to just run it."
 - About to enter a 4th fix-loop retry on the same task.
 - About to spawn a subagent from inside a subagent.
