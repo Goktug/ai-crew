@@ -128,25 +128,102 @@ echo ">>> Run complete. Inspecting results ..."
 echo ""
 
 # --- Hand-off evidence checks ---
+#
+# Claude Code 2.1.107 facts that drive the patterns below:
+#   - The subagent dispatch tool is named `Agent` (NOT `Task`).
+#   - subagent_type values are namespaced by plugin: `ai-crew:developer`,
+#     not bare `developer`.
+#   - A single logical assistant message can be streamed as multiple rows
+#     sharing one `message.id`. Tool_use counts MUST be aggregated by id.
+#
+# All checks require jq. macOS doesn't ship `timeout` either — the runner's
+# top-level `claude -p` invocation doesn't get killed if it hangs, but every
+# check below operates on the captured log file and is fast.
+
 hand_off_failed=0
 
+if ! command -v jq > /dev/null 2>&1; then
+  echo "ERROR: jq is required for hand-off checks." >&2
+  echo "Install with: brew install jq" >&2
+  exit 1
+fi
+
+# Pre-compute the metrics we need with one jq pass each. All counts are
+# integers — never strings with embedded newlines.
+agent_dispatches=$(jq -s '
+  [.[] | select(.type == "assistant") | .message.content[]?
+   | select(.type == "tool_use" and .name == "Agent")] | length
+' "$LOG_FILE")
+
+developer_dispatches=$(jq -s '
+  [.[] | select(.type == "assistant") | .message.content[]?
+   | select(.type == "tool_use" and .name == "Agent")
+   | .input.subagent_type
+   | select(. == "developer" or . == "ai-crew:developer")] | length
+' "$LOG_FILE")
+
+webresearcher_dispatches=$(jq -s '
+  [.[] | select(.type == "assistant") | .message.content[]?
+   | select(.type == "tool_use" and .name == "Agent")
+   | .input.subagent_type
+   | select(. == "web-researcher" or . == "ai-crew:web-researcher")] | length
+' "$LOG_FILE")
+
+# Group all assistant rows by message.id, then for each group count Agent
+# tool_use blocks across the rows. A group whose count is ≥2 is a parallel
+# fan-out (multiple tool calls in one logical assistant message).
+parallel_turns=$(jq -s '
+  [.[] | select(.type == "assistant")]
+  | group_by(.message.id)
+  | map([.[].message.content[]? | select(.type == "tool_use" and .name == "Agent")] | length)
+  | map(select(. >= 2))
+  | length
+' "$LOG_FILE")
+
+largest_fanout=$(jq -s '
+  [.[] | select(.type == "assistant")]
+  | group_by(.message.id)
+  | map([.[].message.content[]? | select(.type == "tool_use" and .name == "Agent")] | length)
+  | max // 0
+' "$LOG_FILE")
+
+# Match PASS:/FAIL: as the developer's one-line return inside any text content.
+pass_replies=$(jq -s '
+  [.[] | select(.type == "user") | .message.content[]?
+   | select(.type == "tool_result")
+   | (.content // [])
+   | (if type == "string" then [{type: "text", text: .}] else . end)
+   | .[]?
+   | select(.type == "text")
+   | .text
+   | select(test("^PASS:"))] | length
+' "$LOG_FILE")
+
+fail_replies=$(jq -s '
+  [.[] | select(.type == "user") | .message.content[]?
+   | select(.type == "tool_result")
+   | (.content // [])
+   | (if type == "string" then [{type: "text", text: .}] else . end)
+   | .[]?
+   | select(.type == "text")
+   | .text
+   | select(test("^FAIL:"))] | length
+' "$LOG_FILE")
+
 echo "--- Check 1: developer subagent dispatched at least once ---"
-if grep -q '"subagent_type"[[:space:]]*:[[:space:]]*"developer"' "$LOG_FILE" 2>/dev/null; then
-  dispatch_count=$(grep -c '"subagent_type"[[:space:]]*:[[:space:]]*"developer"' "$LOG_FILE" || echo "0")
-  echo "  [PASS] developer subagent dispatched $dispatch_count time(s)"
+if [ "$developer_dispatches" -ge 1 ]; then
+  echo "  [PASS] developer subagent dispatched $developer_dispatches time(s) (web-researcher: $webresearcher_dispatches, total Agent calls: $agent_dispatches)"
 else
-  echo "  [FAIL] no developer subagent dispatch found in stream-json log"
+  echo "  [FAIL] no developer subagent dispatch found (total Agent calls: $agent_dispatches, web-researcher: $webresearcher_dispatches)"
   hand_off_failed=$((hand_off_failed + 1))
 fi
 
 echo ""
 echo "--- Check 2: developer subagent returned PASS/FAIL ---"
-if grep -qE '"text"[[:space:]]*:[[:space:]]*"(PASS|FAIL):' "$LOG_FILE" 2>/dev/null; then
-  pass_count=$(grep -cE '"text"[[:space:]]*:[[:space:]]*"PASS:' "$LOG_FILE" || echo "0")
-  fail_count=$(grep -cE '"text"[[:space:]]*:[[:space:]]*"FAIL:' "$LOG_FILE" || echo "0")
-  echo "  [PASS] developer reported PASS=$pass_count FAIL=$fail_count"
+if [ "$((pass_replies + fail_replies))" -ge 1 ]; then
+  echo "  [PASS] developer reported PASS=$pass_replies FAIL=$fail_replies"
 else
-  echo "  [WARN] no PASS:/FAIL: lines in subagent text — pattern may differ"
+  echo "  [WARN] no PASS:/FAIL: lines in subagent tool_result text — developer may have used a different format"
 fi
 
 echo ""
@@ -161,53 +238,40 @@ else
 fi
 
 echo ""
-echo "--- Check 4: developer did NOT spawn its own subagent (1-level dispatch) ---"
-# Count Task tool calls inside subagent contexts. If any subagent_id has nested
-# subagent dispatches, the 1-level rule is broken.
-nested=$(grep -c '"name"[[:space:]]*:[[:space:]]*"Task"' "$LOG_FILE" 2>/dev/null || echo "0")
-top_level=$(grep -c '"subagent_type"[[:space:]]*:[[:space:]]*"developer"' "$LOG_FILE" 2>/dev/null || echo "0")
-if [ "$nested" -le "$top_level" ]; then
-  echo "  [PASS] no nested subagent dispatches detected ($nested Task calls, $top_level developer dispatches)"
+echo "--- Check 4: 1-level dispatch (no nested subagent calls) ---"
+# Strict 1-level dispatch means: every Agent tool call must come from the
+# top-level team-lead session, not from inside another subagent. Inside a
+# subagent the Agent tool isn't even available (developer/web-researcher
+# don't have it in their tools list), so any nested call would surface as
+# an error in the stream. We approximate the check by asserting that every
+# Agent tool call resolves to a known subagent_type (developer or
+# web-researcher). An unknown value would indicate a wrong-tool dispatch.
+unknown_dispatches=$((agent_dispatches - developer_dispatches - webresearcher_dispatches))
+if [ "$unknown_dispatches" -eq 0 ]; then
+  echo "  [PASS] all $agent_dispatches Agent calls resolved to a known subagent type"
 else
-  echo "  [WARN] $nested Task calls vs $top_level developer dispatches — investigate manually"
+  echo "  [WARN] $unknown_dispatches Agent call(s) used an unknown subagent_type — investigate manually"
 fi
 
 echo ""
-echo "--- Check 5: parallel fan-out (≥2 Task calls in the same assistant turn) ---"
-# Find assistant turns that contain ≥2 Task tool_use blocks. Each such turn is
-# one parallel fan-out by the team-lead. Requires jq.
-if command -v jq > /dev/null 2>&1; then
-  parallel_turns=$(jq -s '
-    [.[] | select(.type == "assistant")]
-    | map(([.message.content[]? | select(.type == "tool_use" and .name == "Task")] | length))
-    | map(select(. >= 2))
-    | length
-  ' "$LOG_FILE" 2>/dev/null || echo "0")
-  largest_fanout=$(jq -s '
-    [.[] | select(.type == "assistant")]
-    | map(([.message.content[]? | select(.type == "tool_use" and .name == "Task")] | length))
-    | max // 0
-  ' "$LOG_FILE" 2>/dev/null || echo "0")
-  echo "  parallel_turns=$parallel_turns largest_fanout=$largest_fanout"
+echo "--- Check 5: parallel fan-out (≥2 Agent calls in one assistant message) ---"
+echo "  parallel_turns=$parallel_turns largest_fanout=$largest_fanout"
 
-  # ts-utility-pack: 3 independent tasks → at least one turn must have ≥2 Task calls.
-  # rn-counter: sequential by design → no parallel fan-out expected.
-  if [[ "$TEST_NAME" == "ts-utility-pack" ]]; then
-    if [ "$parallel_turns" -ge 1 ] && [ "$largest_fanout" -ge 2 ]; then
-      echo "  [PASS] parallel fan-out detected ($parallel_turns turn(s) had ≥2 Task calls, largest=$largest_fanout)"
-    else
-      echo "  [FAIL] no parallel fan-out — three independent tasks ran sequentially"
-      hand_off_failed=$((hand_off_failed + 1))
-    fi
+# ts-utility-pack: 3 independent tasks → at least one message must have ≥2 Agent calls.
+# rn-counter: sequential by design → no parallel fan-out expected.
+if [[ "$TEST_NAME" == "ts-utility-pack" ]]; then
+  if [ "$parallel_turns" -ge 1 ] && [ "$largest_fanout" -ge 2 ]; then
+    echo "  [PASS] parallel fan-out detected ($parallel_turns turn(s) with ≥2 Agent calls, largest=$largest_fanout)"
   else
-    if [ "$parallel_turns" -ge 1 ]; then
-      echo "  [INFO] parallel fan-out detected but not required for this fixture"
-    else
-      echo "  [INFO] no parallel fan-out (sequential dispatch — expected for this fixture)"
-    fi
+    echo "  [FAIL] no parallel fan-out — three independent tasks ran sequentially"
+    hand_off_failed=$((hand_off_failed + 1))
   fi
 else
-  echo "  [SKIP] jq not installed — cannot inspect message structure"
+  if [ "$parallel_turns" -ge 1 ]; then
+    echo "  [INFO] parallel fan-out detected (largest=$largest_fanout) — not required for this fixture"
+  else
+    echo "  [INFO] no parallel fan-out (sequential dispatch — expected for this fixture)"
+  fi
 fi
 
 echo ""
