@@ -15,15 +15,18 @@ Strict 1-level dispatch: subagents never spawn subagents. The `developer` and `w
 
 **Every question to the human follows a shared protocol.** Any message in any phase that asks the human anything — intake Q&A, plan checkpoint revisions, verify/review escalations — follows `references/asking-clarifying-questions.md`: one question per message, multiple choice when bounded, non-trivial decisions surfaced as 2–3 options with trade-offs, lead with a recommendation. This protocol is a reference doc (not a skill), so the team-lead *reads* it with the `Read` tool when it needs a refresher — the "never Read on SKILL.md" rule does not apply to files under `references/`.
 
-## Foundation: invoke `using-agent-skills` first
+## Foundation: core operating behaviors
 
-Before Phase 1, invoke the `ai-crew:using-agent-skills` skill via the Skill tool. It is the meta-skill that governs how every other skill is discovered and applied. Specifically:
+Six behaviors apply at every phase of this run:
 
-- The **Skill Discovery** decision tree tells the team-lead which skill to load at each phase.
-- The six **Core Operating Behaviors** (Surface Assumptions, Manage Confusion, Push Back, Enforce Simplicity, Scope Discipline, Verify) apply at every phase, not just one.
-- The **Lifecycle Sequence** is the canonical phase order — the nine ai-crew phases below are a thin wrapper around it.
+1. **Surface assumptions.** Before any non-trivial implementation, list the assumptions you are making about requirements, architecture, and scope. Let the user correct them before you proceed.
+2. **Manage confusion actively.** When you notice a conflict or an unclear requirement, STOP and ask. Never pick an interpretation and hope it is right.
+3. **Push back when warranted.** If an approach has a clear problem, name it, quantify the downside where possible, and propose an alternative. Sycophancy is a failure mode.
+4. **Enforce simplicity.** The boring, obvious solution beats clever abstractions. If 1000 lines would do in 100, you have failed.
+5. **Maintain scope discipline.** Touch only what is in scope. No unsolicited refactors, no "while we are here" cleanup.
+6. **Verify, don't assume.** No task is complete without evidence — passing tests, build output, runtime data.
 
-If you skip the meta-skill, you will rediscover its lessons the expensive way.
+**You are inside an `ai-crew:team-lead` run.** Do NOT invoke the `ai-crew:team-lead` skill again during this session — every further Skill tool call targets a different skill in the Skill Invocation Map below.
 
 ## When to Use
 
@@ -146,11 +149,10 @@ Invoke `ai-crew:git-workflow-and-versioning`, `ai-crew:shipping-and-launch`, and
 
 ## Skill Invocation Map
 
-The team-lead invokes these skills via the Skill tool at each phase. `using-agent-skills` is invoked once at the start of the run and its guidance stays in mind for the rest of it. Every skill in the table below is called with `Skill({ skill: "ai-crew:<name>" })` — never via the Read tool.
+The team-lead invokes these skills via the Skill tool at each phase. Every skill in the table below is called with `Skill({ skill: "ai-crew:<name>" })` — never via the Read tool.
 
 | Phase | Skills invoked via Skill tool |
 |---|---|
-| Foundation (once, at run start) | `using-agent-skills` |
 | Intake | `idea-refine` **(conditional — vague requests only)**, then `intake-with-validation` |
 | Research | (no skill — dispatches `web-researcher` subagents) |
 | Spec | `spec-driven-development`, `context-engineering` |
@@ -194,7 +196,7 @@ Stop and reconsider if you notice any of these:
 
 Before declaring a run complete:
 
-- [ ] `ai-crew:using-agent-skills` was invoked via the Skill tool at the start of the run
+- [ ] `ai-crew:team-lead` was invoked exactly once at the start of the run — not re-invoked at any later point
 - [ ] Each phase's skill(s) were invoked via the Skill tool (not read with the Read tool)
 - [ ] `~/.claude/ai-crew/runs/<run-id>/` contains exactly `spec.md`, `plan.md`, `progress.md`
 - [ ] `progress.md` shows every plan task as PASS or explicit FAIL with reason
