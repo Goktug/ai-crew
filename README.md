@@ -1,87 +1,266 @@
-# g-plugins-marketplace
+# ai-crew
 
-Goktug's plugins marketplace for [Claude Code](https://code.claude.com). Currently distributes the **ai-crew** plugin — a production-grade Opus team-lead orchestrator that takes any React Native or TypeScript backend task from idea to PR with one human checkpoint.
+**A production-grade engineering orchestrator for Claude Code.**
 
-## What's in the marketplace
+**Describe the job. Approve the plan. Get the PR.**
 
-| Plugin | Description |
-|---|---|
-| **ai-crew** | Opus team-lead with strict 1-level dispatch to Sonnet developers and Haiku web-researchers. Reference-based prompts, three-file run state (`spec.md`, `plan.md`, `progress.md`), inline five-axis review across four review skills, max 3 fix loops. Vendored on top of the [`agent-skills`](https://github.com/addyosmani/agent-skills) workflow library. |
+ai-crew takes any TypeScript, Node, backend, or React Native task from a one-line description to an opened PR — with exactly one human decision point in between. One Opus brain at the wheel; many Sonnet hands at the keyboard.
+
+Built on top of [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills) (vendored, MIT). See [§ Why this is different](#why-this-is-different) for what ai-crew adds on top.
+
+---
+
+## Demo
+
+```
+$ claude
+> /team-lead Wire RevenueCat into our paywall, gate the premium tab, and track
+              checkout events with our analytics SDK
+
+ai-crew  [Intake — 1 of 3 questions]
+         What SDK version of RevenueCat are you on, and does your analytics
+         setup use Segment, Amplitude, or something custom?
+
+You      RevenueCat iOS SDK 4.x, analytics is a custom wrapper around Mixpanel.
+
+ai-crew  [Intake — 2 of 3 questions]
+         Should the premium gate block navigation entirely, or show a paywall
+         modal over the existing tab?
+
+You      Modal over the tab, dismiss returns to free content.
+
+ai-crew  [Intake complete. Writing spec...]
+         [spec.md written]
+         [plan.md written — 6 tasks, 2 parallel waves]
+
+         ✋  CHECKPOINT — review plan.md before I write a single file.
+            Approve, or tell me what to change.
+
+You      Looks good, go.
+
+ai-crew  [Wave 1 — dispatching 3 parallel Sonnet developers...]
+         [Wave 2 — dispatching 2 parallel Sonnet developers...]
+         [Verify — all tests green]
+         [Review — inline five-axis review, no critical findings]
+         [Ship — PR opened]
+
+         PR: https://github.com/your-org/your-app/pull/47
+             "feat: RevenueCat paywall, premium gate, checkout analytics"
+```
+
+---
+
+## What you actually get
+
+- A PR opened on a feature branch, with tests, ready to review.
+- A written `spec.md` and `plan.md` before any code is touched — edit them if you want.
+- One clear checkpoint: you approve the plan, then ai-crew runs without interruption.
+- Tasks that can run in parallel are dispatched as concurrent Sonnet developers — no serial bottleneck on independent work.
+- A five-axis review (correctness, readability, architecture, security, performance) done inline by the Opus team-lead before the PR opens.
+- Max 3 fix loops on failures before the problem escalates back to you, never silently broken.
+
+---
 
 ## Install
 
+### Claude Code
+
 ```bash
-# 1. Add this marketplace
-claude plugin marketplace add Goktug/g-plugins-marketplace
+# 1. Add the marketplace
+claude plugin marketplace add goktug/ai-crew
 
-# 2. Install the ai-crew plugin from it
-claude plugin install ai-crew@g-plugins-marketplace
+# 2. Install the plugin
+claude plugin install ai-crew
 
-# 3. Use it
+# 3. Run
 claude
-> /team-lead Build a push-notification permission flow for our React Native onboarding screen.
+> /team-lead <your task here>
 ```
 
-For local development without publishing:
+### Codex
 
 ```bash
-# Load the plugin for one session, no install
-claude --plugin-dir /path/to/g-plugins-marketplace
+# Skills are portable — copy the skills/ directory into your Codex plugin layout
+# and load skills/team-lead/SKILL.md as the entry point. The skill files are
+# plain Markdown with no Claude Code-specific bindings.
+git clone https://github.com/goktug/ai-crew.git
+cp -R ai-crew/skills your-codex-plugin/skills
 ```
 
-## ai-crew quick architecture
+### Other Claude-compatible CLIs and SDKs
 
-- **Opus team-lead** runs the full lifecycle: Intake → Research → Spec → Plan → CHECKPOINT → Build → Verify → Review → Ship.
-- **One human checkpoint:** plan approval. Everything else is autonomous.
-- **Strict 1-level dispatch:** the `developer` (Sonnet) and `web-researcher` (Haiku) subagents have no `Agent`/`Task` tools by configuration — they cannot spawn further subagents.
-- **Reference-based prompts with line-range citations:** team-lead's outgoing dispatch is ≤30 lines and contains *line ranges into `spec.md` / `plan.md`* — never embedded content, never whole-file pointers. `spec.md` carries a Section Index and `plan.md` carries a Task Index so each dispatch cites exactly the slices the subagent must read. Team-lead and subagent context both stay tight on long runs.
-- **Inline review:** team-lead applies five-axis review across `code-review-and-quality`, `security-and-hardening`, `code-simplification`, and `performance-optimization`. No reviewer subagents.
-- **Run state:** three files at `~/.claude/ai-crew/runs/<YYYY-MM-DD-slug>/`: `spec.md`, `plan.md`, `progress.md`. That's it.
+The `skills/` directory is plain Markdown. Any CLI or SDK that can read SKILL.md files (Cursor Agents, custom Claude SDK wrappers, etc.) can load the vendored skills directly. Point your tool at `skills/team-lead/SKILL.md` as the entry point.
 
-Full design: [`docs/team-lead-design.md`](docs/team-lead-design.md). Implementation plan: [`docs/implementation-plan.md`](docs/implementation-plan.md).
+---
 
-## Layout
+## The example, walked through
+
+Starting command:
 
 ```
-g-plugins-marketplace/
-├── .claude-plugin/
-│   ├── plugin.json              # ai-crew plugin manifest
-│   └── marketplace.json         # marketplace manifest (this repo)
-├── skills/                      # 24 skills (21 vendored from agent-skills + 3 new)
-│   ├── team-lead/               # NEW — orchestrator
-│   ├── intake-with-validation/  # NEW — one-question-at-a-time
-│   ├── mobile-component-testing-with-rntl/  # NEW — RNTL slots into TDD
-│   └── (21 vendored skills)
-├── agents/                      # 5 agents (3 vendored + 2 new)
-│   ├── developer.md             # NEW — Sonnet, no Agent/Task tool
-│   ├── web-researcher.md        # NEW — Haiku, web tools only
-│   └── (3 vendored agents)
-├── references/                  # 4 vendored checklists
-├── hooks/                       # vendored hooks + detect-project-type.sh
-├── .claude/commands/            # 8 slash commands (7 vendored + /team-lead)
-├── docs/                        # design + implementation plan
-└── tests/                       # static + functional + team-lead-e2e/
+> /team-lead Wire RevenueCat into our paywall, gate the premium tab, and track
+              checkout events with our analytics SDK
 ```
 
-## Tests
+**Intake phase** — one question at a time:
 
-```bash
-# Static checks (fast, no API cost) — runs in seconds
-./tests/run-tests.sh --no-api
-
-# Full suite incl. functional tests that load the plugin via claude -p
-./tests/run-tests.sh
-
-# End-to-end smoke test of the team-lead → developer hand-off (~2–5 min)
-./tests/team-lead-e2e/run-test.sh rn-counter
+```
+Q1: What RevenueCat SDK version, and what analytics tool?
+Q2: Hard gate or modal paywall on the premium tab?
+Q3: Do you have an existing feature-flag system, or should the gate be code-only?
 ```
 
-See [`tests/README.md`](tests/README.md) and [`tests/team-lead-e2e/README.md`](tests/team-lead-e2e/README.md).
+**plan.md excerpt** (what you approve at the checkpoint):
 
-## Credits
+```
+T-01  Add RevenueCat SDK init + entitlement check  [files: src/iap/rc.ts]
+T-02  Paywall modal component + dismiss logic       [files: src/screens/Paywall.tsx]
+T-03  Premium tab gate (depends on T-01, T-02)     [files: src/navigation/TabNav.tsx]
+T-04  Analytics: track checkout events             [files: src/analytics/iap.ts]
+```
 
-- Vendored skills, agents, references, hooks, and base slash commands are a one-time copy of [`agent-skills`](https://github.com/addyosmani/agent-skills) by Addy Osmani, MIT-licensed.
+**Post-build summary line:**
 
-## License
+```
+PASS: 4 tasks complete, 12 tests green, PR #47 opened on feat/revenuecat-paywall
+```
 
-MIT — see [LICENSE](LICENSE) when added.
+---
+
+## More examples
+
+ai-crew is general-purpose. React Native is one use case, not the only one.
+
+```
+> /team-lead Migrate our Express auth middleware from session cookies to JWT
+              rotation, with tests and a rollback plan.
+```
+
+```
+> /team-lead Add a Stripe webhook handler for invoice.payment_failed that retries
+              dunning notifications and logs to Sentry.
+```
+
+```
+> /team-lead Extract our user-profile API into a standalone NestJS microservice,
+              update the monolith to call it over HTTP, write contract tests.
+```
+
+---
+
+## How it works
+
+### 9-phase lifecycle
+
+```
+Intake ─► Research ─► Spec ─► Plan ─► ✋ CHECKPOINT ─► Build ─► Verify ─► Review ─► Ship
+```
+
+Each phase has a defined skill and a defined output. The Opus team-lead runs every phase inline — it dispatches subagents only for Build tasks and web research questions.
+
+### Model routing
+
+| Layer | Model | Role |
+|---|---|---|
+| `team-lead` (main session) | **Opus** | Orchestrator + architect + planner + verifier + reviewer + shipper. Heavy thinking inline. |
+| `developer` subagent | **Sonnet** | One task per dispatch. No `Agent`/`Task` tool. |
+| `web-researcher` subagent | **Haiku** | One focused web-research question per dispatch. No `Agent`/`Task` tool. |
+
+### Reference-based dispatch
+
+When the team-lead dispatches a developer, the outgoing prompt is under 30 lines. It contains file paths and line ranges into `spec.md` and `plan.md` — never embedded content, never whole-file pointers. The `md-index.sh` script generates a Section Index for `spec.md` and a Task Index for `plan.md` at the end of Phase 3 and Phase 4 respectively, so every dispatch cites exactly the slices the developer must read. Team-lead context stays tight on long runs; the developer's input tokens drop because it never reads files it doesn't need.
+
+### Parallel waves
+
+Tasks marked independent in `plan.md` are dispatched as concurrent Sonnet developers in the same wave — no artificial serial bottleneck on work that can run side by side. Beyond a single run, you can fan out multiple `/team-lead` runs across git worktrees or separate sessions. ai-crew pulls you back into the loop only at each run's plan checkpoint. Independent work scales horizontally; your attention stays at the decision boundary.
+
+---
+
+## Why this is different
+
+### Built on agent-skills (vendored)
+
+ai-crew vendors 21 skills from [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills) (MIT) as a one-time verbatim copy. Those skills cover test-driven development, incremental implementation, code review, security hardening, performance optimization, API design, and more. ai-crew adds three skills on top: `team-lead` (the orchestrator lifecycle), `intake-with-validation` (one-question-at-a-time structured Q&A), and `mobile-component-testing-with-rntl` (React Native Testing Library slot). The vendored skills are never edited — they stay aligned with upstream by design.
+
+### Inspired by Superpowers' intake pattern
+
+The one-question-at-a-time intake pattern was popularized by the Superpowers project. ai-crew makes it the default for every run — even when the request looks complete, the intake phase surfaces assumptions before a single line of code is written. The most expensive bugs come from context you didn't ask for.
+
+### Comparison
+
+| Feature | agent-skills | Superpowers | ai-crew |
+|---|---|---|---|
+| Structured intake (one Q at a time) | No | Yes | Yes — every run |
+| Full lifecycle orchestrator (Intake → PR) | No | Partial | Yes — 9 phases |
+| Written plan with human checkpoint | No | No | Yes — mandatory |
+| Parallel agent dispatch within a run | No | No | Yes — independent tasks fan out |
+| Inline five-axis review by orchestrator | No | No | Yes — Opus, 4 review skills |
+| Max fix-loop budget before escalation | No | No | Yes — 3 loops |
+| Reference-based dispatch (line-range slicing) | No | No | Yes — md-index.sh |
+| Subagent spawning subagents | N/A | Varies | Never — strict 1-level |
+
+---
+
+## The trust contract
+
+Guarantees pulled directly from the [architectural laws](docs/team-lead-design.md):
+
+- **Strict 1-level dispatch.** `developer` and `web-researcher` subagents have no `Agent` or `Task` tools by configuration. They cannot spawn further subagents.
+- **Reference-based dispatch.** Every developer prompt is under 30 lines and cites spec/plan line ranges — never embedded context, never whole-file pointers.
+- **Three-file run state.** Each run writes exactly `spec.md`, `plan.md`, `progress.md` under `~/.claude/ai-crew/runs/<YYYY-MM-DD-slug>/`. Nothing else unless the run materially needs it.
+- **One mandatory human checkpoint.** Plan approval is the only point where ai-crew stops and waits. Everything before and after is autonomous.
+- **Max 3 fix loops before escalation.** Verify and Review share a combined budget of 3 fix-loop retries. On the 4th failure, ai-crew escalates to you instead of silently spinning.
+- **Inline review by the Opus team-lead.** Review is done inline across 4 review skills (`code-review-and-quality`, `security-and-hardening`, `code-simplification`, `performance-optimization`). There are no reviewer subagents.
+- **Vendored skills are never edited.** The 21 agent-skills are a one-time copy. Editing them would silently diverge from upstream.
+
+---
+
+## FAQ
+
+**What happens when something goes wrong mid-run?**
+The team-lead dispatches a focused-fix developer task and retries. Verify and Review share a combined budget of max 3 fix loops. If the third attempt still fails, ai-crew stops and explains the failure — it does not silently loop forever or paper over broken tests.
+
+**Is this React Native only?**
+No. ai-crew is general-purpose for TypeScript, Node, backend, and fullstack work. React Native is one example use case, and the `mobile-component-testing-with-rntl` skill is bundled but only used when the plan tags a task for it. The three non-RN examples in this README are there specifically to make that point.
+
+**How do you avoid runaway token costs?**
+Reference-based dispatch with line-range slicing. The developer subagent reads only the ~30-line prompt it receives plus the specific slices of `spec.md` and `plan.md` it is told to fetch — not the whole files. The `md-index.sh` script generates the Section Index and Task Index that make those citations possible. The architecture is the control, not a percentage claim.
+
+**Can I use this with Codex or other frontier model CLIs?**
+Yes. See the install matrix above. The `skills/` directory is plain Markdown and works with any CLI or SDK that supports SKILL.md-style skill loading — copy the `skills/` directory into your tool's plugin layout and point it at `skills/team-lead/SKILL.md`.
+
+**Why one human checkpoint and not zero or three?**
+Plan approval is the only step where human course-correction has outsized leverage. Before the plan, requirements are still ambiguous. After the plan, the code is already written. Catching a wrong direction at plan review costs a 30-second read and a one-sentence redirect; catching it after Build costs a full re-run.
+
+**Can I run multiple ai-crew jobs in parallel?**
+Yes. Fan out across git worktrees or separate terminal sessions — each `/team-lead` invocation is independent. ai-crew pulls you back only at each run's plan checkpoint. Within a single run, independent tasks are dispatched as parallel waves of Sonnet developers automatically — you don't have to do anything to enable it.
+
+**Does ai-crew work on existing codebases or only greenfield?**
+Both. The intake phase asks about existing patterns, conventions, and constraints before writing the spec. The developer subagents read the files they are told to touch before editing them. The plan lists the exact files that will change — you see that at the checkpoint before anything is modified.
+
+**What models does ai-crew use and can I change them?**
+The orchestrator (team-lead) runs on Opus for heavy reasoning — spec writing, plan quality, inline review. Developer subagents run on Sonnet: one atomized task per dispatch, no spawning of further agents. Web-researcher subagents run on Haiku: one focused question each. The model routing is a locked architectural decision because the cost-to-capability fit at each layer is deliberate. See `docs/team-lead-design.md` for the rationale.
+
+---
+
+## Run state layout
+
+```
+~/.claude/ai-crew/runs/2026-04-25-revenuecat-paywall/
+├── spec.md       # what we're building, constraints, success criteria
+├── plan.md       # task DAG with Task Index — the sacred artifact
+└── progress.md   # per-task checkbox state, review notes
+```
+
+Three files. That's it.
+
+---
+
+## Credits and links
+
+- **[agent-skills](https://github.com/addyosmani/agent-skills)** by Addy Osmani — 21 skills vendored verbatim, MIT-licensed. The foundation this plugin is built on.
+- **Superpowers** — inspiration for the one-question-at-a-time intake pattern.
+- **[Anthropic Claude Code](https://docs.anthropic.com/claude-code)** — the runtime this plugin targets.
+- **Architecture deep-dive:** [`docs/team-lead-design.md`](docs/team-lead-design.md) — all eight architectural decisions, locked.
+- **Repository:** [github.com/goktug/ai-crew](https://github.com/goktug/ai-crew)
+- **License:** MIT — see [LICENSE](LICENSE).
