@@ -205,6 +205,21 @@ Tasks marked independent in `plan.md` are dispatched as concurrent Sonnet develo
 
 ---
 
+## The team-lead is smart
+
+The orchestrator does the heavy thinking once and then hands off the smallest possible unit of work to a Sonnet developer. That keeps token usage low and turn count low without giving up code quality.
+
+- **Scoped tasks.** Each developer dispatch is one task: a specific ID from `plan.md`, the exact files to touch, the acceptance criteria, and the verification command. No broad "implement the feature" prompts that produce broad, generic code.
+- **Pre-named skills per task.** The plan tags every task with the skills it requires — for example `test-driven-development`, `incremental-implementation`, `api-and-interface-design`, `mobile-component-testing-with-rntl`. The developer reads exactly those skills before writing code, nothing more.
+- **Reference, not embedding.** Every dispatch prompt stays under 30 lines and cites `spec.md` / `plan.md` line ranges via `md-index.sh`. The developer reads only the slices it needs, not the whole files. The team-lead's own context stays compact even across long runs.
+- **Sequential when work depends on work.** Tasks with declared dependencies execute in order, so each developer sees a coherent codebase state.
+- **Parallel when work is independent.** Tasks the plan marks independent dispatch as a concurrent wave of Sonnet developers. Complexity decides shape: a feature with one critical path runs sequentially, a feature with three orthogonal slices runs as a 3-wide wave.
+- **Three-file context budget.** `spec.md`, `plan.md`, and `progress.md` are the entire run state. Anything else is created only when the run materially needs it.
+
+The result: fewer turns, smaller per-turn prompts, and developers that read the right skill at the right time without you babysitting.
+
+---
+
 ## Why this is different
 
 ### Built on agent-skills (vendored)
