@@ -17,17 +17,24 @@ $ claude
 > /team-lead Wire RevenueCat into our paywall, gate the premium tab, and track
               checkout events with our analytics SDK
 
-ai-crew  [Intake — 1 of 3 questions]
-         What SDK version of RevenueCat are you on, and does your analytics
-         setup use Segment, Amplitude, or something custom?
+ai-crew  [Intake — Q1 of 3]   one question at a time, A/B/C with tradeoffs
+         How should the premium gate behave when a user without entitlement
+         taps the tab?
 
-You      RevenueCat iOS SDK 4.x, analytics is a custom wrapper around Mixpanel.
+         A. Hard gate — replace the tab entirely with the paywall
+            (recommended: cleanest mental model, zero leakage of premium UI)
+         B. Modal paywall over the existing tab; dismiss returns to free content
+            (best if you have free content worth keeping inside the tab)
+         C. Soft gate — inline teaser with a Subscribe CTA
+            (highest conversion in some apps, mixed UX consistency)
 
-ai-crew  [Intake — 2 of 3 questions]
-         Should the premium gate block navigation entirely, or show a paywall
-         modal over the existing tab?
+You      B
 
-You      Modal over the tab, dismiss returns to free content.
+ai-crew  [Q2 — RevenueCat SDK version?]  A: 4.x   B: 5.0   C: other
+You      A
+
+ai-crew  [Q3 — Analytics destination?]   A: Segment   B: Amplitude   C: custom
+You      C — Mixpanel via our own wrapper
 
 ai-crew  [Intake complete. Writing spec...]
          [spec.md written]
@@ -61,35 +68,47 @@ ai-crew  [Wave 1 — dispatching 3 parallel Sonnet developers...]
 
 ---
 
-## Install
+## Quick Start
 
-### Claude Code
+### Claude Code (recommended)
 
-```bash
-# 1. Add the marketplace
-claude plugin marketplace add goktug/ai-crew
+**Marketplace install:**
 
-# 2. Install the plugin
-claude plugin install ai-crew
-
-# 3. Run
-claude
-> /team-lead <your task here>
+```
+/plugin marketplace add goktug/ai-crew
+/plugin install ai-crew@ai-crew
 ```
 
-### Codex
+> **SSH errors?** The marketplace clones repos via SSH. If you don't have SSH keys set up on GitHub, either [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or switch to HTTPS for fetches:
+>
+>     git config --global url."https://github.com/".insteadOf "git@github.com:"
 
-```bash
-# Skills are portable — copy the skills/ directory into your Codex plugin layout
-# and load skills/team-lead/SKILL.md as the entry point. The skill files are
-# plain Markdown with no Claude Code-specific bindings.
+**Local / development:**
+
+```
 git clone https://github.com/goktug/ai-crew.git
-cp -R ai-crew/skills your-codex-plugin/skills
+claude --plugin-dir /path/to/ai-crew
 ```
 
-### Other Claude-compatible CLIs and SDKs
+**Try it:**
 
-The `skills/` directory is plain Markdown. Any CLI or SDK that can read SKILL.md files (Cursor Agents, custom Claude SDK wrappers, etc.) can load the vendored skills directly. Point your tool at `skills/team-lead/SKILL.md` as the entry point.
+```
+> /team-lead Migrate our Express auth middleware to JWT rotation, with tests
+              and a rollback plan.
+```
+
+### Other agents (skills-only)
+
+The `/team-lead` orchestrator depends on Claude Code's subagent dispatch. The underlying skills are plain Markdown vendored from [`agent-skills`](https://github.com/addyosmani/agent-skills) and work anywhere agent-skills do:
+
+- **Cursor** — copy `SKILL.md` files into `.cursor/rules/`. See [agent-skills/docs/cursor-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/cursor-setup.md).
+- **Gemini CLI** — `gemini skills install https://github.com/goktug/ai-crew.git --path skills`. See [agent-skills/docs/gemini-cli-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/gemini-cli-setup.md).
+- **Windsurf** — add skill contents to your Windsurf rules. See [agent-skills/docs/windsurf-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/windsurf-setup.md).
+- **OpenCode** — uses `AGENTS.md` and the `skill` tool. See [agent-skills/docs/opencode-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/opencode-setup.md).
+- **GitHub Copilot** — agent definitions go in `agents/`, skill content in `.github/copilot-instructions.md`. See [agent-skills/docs/copilot-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/copilot-setup.md).
+- **Codex / other agents** — `skills/` is plain Markdown. Any agent that accepts instruction files can load it.
+
+The orchestrator is Claude Code-specific. The skills run anywhere.
 
 ---
 
@@ -102,12 +121,22 @@ Starting command:
               checkout events with our analytics SDK
 ```
 
-**Intake phase** — one question at a time:
+**Intake phase** — one question at a time, **multiple choice with tradeoffs**. Every question leads with a recommendation:
 
 ```
-Q1: What RevenueCat SDK version, and what analytics tool?
-Q2: Hard gate or modal paywall on the premium tab?
-Q3: Do you have an existing feature-flag system, or should the gate be code-only?
+Q1: How should the premium gate behave on the tab?
+    A. Hard gate — replace the tab with the paywall
+       (recommended — cleanest mental model, zero premium-UI leakage)
+    B. Modal paywall over the tab; dismiss returns to free content
+       (best when you have free content worth keeping inside the tab)
+    C. Soft gate — inline teaser with a Subscribe CTA
+       (highest conversion in some apps, but mixed UX consistency)
+
+Q2: RevenueCat SDK version?
+    A. 4.x       B. 5.0       C. Older — add a migration step
+
+Q3: Analytics destination for checkout events?
+    A. Segment   B. Amplitude   C. Custom wrapper (paste the event contract)
 ```
 
 **plan.md excerpt** (what you approve at the checkpoint):
