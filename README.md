@@ -70,7 +70,10 @@ ai-crew  [Wave 1 — dispatching 3 parallel Sonnet developers...]
 
 ## Quick Start
 
-### Claude Code (recommended)
+Click any tool to expand. Claude Code is the primary platform; the skills run anywhere agent-skills do.
+
+<details open>
+<summary><b>Claude Code (recommended)</b></summary>
 
 **Marketplace install:**
 
@@ -85,7 +88,7 @@ ai-crew  [Wave 1 — dispatching 3 parallel Sonnet developers...]
 
 **Local / development:**
 
-```
+```bash
 git clone https://github.com/goktug/ai-crew.git
 claude --plugin-dir /path/to/ai-crew
 ```
@@ -93,22 +96,66 @@ claude --plugin-dir /path/to/ai-crew
 **Try it:**
 
 ```
-> /team-lead Migrate our Express auth middleware to JWT rotation, with tests
-              and a rollback plan.
+> /team-lead Migrate our Express auth middleware to JWT rotation, with tests and a rollback plan.
 ```
 
-### Other agents (skills-only)
+</details>
 
-The `/team-lead` orchestrator depends on Claude Code's subagent dispatch. The underlying skills are plain Markdown vendored from [`agent-skills`](https://github.com/addyosmani/agent-skills) and work anywhere agent-skills do:
+<details>
+<summary><b>Cursor</b></summary>
 
-- **Cursor** — copy `SKILL.md` files into `.cursor/rules/`. See [agent-skills/docs/cursor-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/cursor-setup.md).
-- **Gemini CLI** — `gemini skills install https://github.com/goktug/ai-crew.git --path skills`. See [agent-skills/docs/gemini-cli-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/gemini-cli-setup.md).
-- **Windsurf** — add skill contents to your Windsurf rules. See [agent-skills/docs/windsurf-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/windsurf-setup.md).
-- **OpenCode** — uses `AGENTS.md` and the `skill` tool. See [agent-skills/docs/opencode-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/opencode-setup.md).
-- **GitHub Copilot** — agent definitions go in `agents/`, skill content in `.github/copilot-instructions.md`. See [agent-skills/docs/copilot-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/copilot-setup.md).
-- **Codex / other agents** — `skills/` is plain Markdown. Any agent that accepts instruction files can load it.
+Copy any `SKILL.md` into `.cursor/rules/`, or reference the full `skills/` directory. See [agent-skills/docs/cursor-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/cursor-setup.md).
 
-The orchestrator is Claude Code-specific. The skills run anywhere.
+</details>
+
+<details>
+<summary><b>Gemini CLI</b></summary>
+
+Install as native skills for auto-discovery, or add to `GEMINI.md` for persistent context.
+
+**From the repo:**
+
+```bash
+gemini skills install https://github.com/goktug/ai-crew.git --path skills
+```
+
+**From a local clone:**
+
+```bash
+gemini skills install ./ai-crew/skills/
+```
+
+See [agent-skills/docs/gemini-cli-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/gemini-cli-setup.md).
+
+</details>
+
+<details>
+<summary><b>Windsurf</b></summary>
+
+Add skill contents to your Windsurf rules configuration. See [agent-skills/docs/windsurf-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/windsurf-setup.md).
+
+</details>
+
+<details>
+<summary><b>OpenCode</b></summary>
+
+Uses agent-driven skill execution via `AGENTS.md` and the `skill` tool. See [agent-skills/docs/opencode-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/opencode-setup.md).
+
+</details>
+
+<details>
+<summary><b>GitHub Copilot</b></summary>
+
+Use agent definitions from `agents/` as Copilot personas, and skill content in `.github/copilot-instructions.md`. See [agent-skills/docs/copilot-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/copilot-setup.md).
+
+</details>
+
+<details>
+<summary><b>Codex / Other agents</b></summary>
+
+Skills are plain Markdown — they work with any agent that accepts system prompts or instruction files. The `/team-lead` orchestrator depends on Claude Code's subagent dispatch, but the underlying skills run wherever [`agent-skills`](https://github.com/addyosmani/agent-skills) do.
+
+</details>
 
 ---
 
@@ -261,29 +308,61 @@ Guarantees pulled directly from the [architectural laws](docs/team-lead-design.m
 
 ## FAQ
 
-**What happens when something goes wrong mid-run?**
+<details>
+<summary><b>What happens when something goes wrong mid-run?</b></summary>
+
 The team-lead dispatches a focused-fix developer task and retries. Verify and Review share a combined budget of max 3 fix loops. If the third attempt still fails, ai-crew stops and explains the failure — it does not silently loop forever or paper over broken tests.
 
-**Is this React Native only?**
+</details>
+
+<details>
+<summary><b>Is this React Native only?</b></summary>
+
 No. ai-crew is general-purpose for TypeScript, Node, backend, and fullstack work. React Native is one example use case, and the `mobile-component-testing-with-rntl` skill is bundled but only used when the plan tags a task for it. The three non-RN examples in this README are there specifically to make that point.
 
-**How do you avoid runaway token costs?**
+</details>
+
+<details>
+<summary><b>How do you avoid runaway token costs?</b></summary>
+
 Reference-based dispatch with line-range slicing. The developer subagent reads only the ~30-line prompt it receives plus the specific slices of `spec.md` and `plan.md` it is told to fetch — not the whole files. The `md-index.sh` script generates the Section Index and Task Index that make those citations possible. The architecture is the control, not a percentage claim.
 
-**Can I use this with Codex or other frontier model CLIs?**
-Yes. See the install matrix above. The `skills/` directory is plain Markdown and works with any CLI or SDK that supports SKILL.md-style skill loading — copy the `skills/` directory into your tool's plugin layout and point it at `skills/team-lead/SKILL.md`.
+</details>
 
-**Why one human checkpoint and not zero or three?**
+<details>
+<summary><b>Can I use this with Codex or other frontier model CLIs?</b></summary>
+
+Yes. See the Quick Start above. The `skills/` directory is plain Markdown and works with any CLI or SDK that supports SKILL.md-style skill loading — copy the `skills/` directory into your tool's plugin layout and point it at `skills/team-lead/SKILL.md`.
+
+</details>
+
+<details>
+<summary><b>Why one human checkpoint and not zero or three?</b></summary>
+
 Plan approval is the only step where human course-correction has outsized leverage. Before the plan, requirements are still ambiguous. After the plan, the code is already written. Catching a wrong direction at plan review costs a 30-second read and a one-sentence redirect; catching it after Build costs a full re-run.
 
-**Can I run multiple ai-crew jobs in parallel?**
+</details>
+
+<details open>
+<summary><b>Can I run multiple ai-crew jobs in parallel?</b></summary>
+
 Yes. Fan out across git worktrees or separate terminal sessions — each `/team-lead` invocation is independent. ai-crew pulls you back only at each run's plan checkpoint. Within a single run, independent tasks are dispatched as parallel waves of Sonnet developers automatically — you don't have to do anything to enable it.
 
-**Does ai-crew work on existing codebases or only greenfield?**
+</details>
+
+<details>
+<summary><b>Does ai-crew work on existing codebases or only greenfield?</b></summary>
+
 Both. The intake phase asks about existing patterns, conventions, and constraints before writing the spec. The developer subagents read the files they are told to touch before editing them. The plan lists the exact files that will change — you see that at the checkpoint before anything is modified.
 
-**What models does ai-crew use and can I change them?**
+</details>
+
+<details>
+<summary><b>What models does ai-crew use and can I change them?</b></summary>
+
 The orchestrator (team-lead) runs on Opus for heavy reasoning — spec writing, plan quality, inline review. Developer subagents run on Sonnet: one atomized task per dispatch, no spawning of further agents. Web-researcher subagents run on Haiku: one focused question each. The model routing is a locked architectural decision because the cost-to-capability fit at each layer is deliberate. See `docs/team-lead-design.md` for the rationale.
+
+</details>
 
 ---
 
