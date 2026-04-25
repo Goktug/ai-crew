@@ -10,6 +10,18 @@ Built on top of [Addy Osmani's `agent-skills`](https://github.com/addyosmani/age
 
 ---
 
+## Backstory
+
+> I love Superpowers and Addy Osmani's `agent-skills`, but I kept finding myself too much in the loop. All I wanted was to define the spec, approve the plan, and get a tested, working PR — not narrate the next step or remember which skill to invoke.
+>
+> So I started with the obvious AI-team setup: business analyst, researcher, designer, developer, each as its own subagent. Burned tokens. Quality barely changed. So I cut them.
+>
+> The unlock: main context stays lean. The orchestrator does analysis, spec, plan, and review inline. Only coding tasks and one-shot web research get delegated — the parts that benefit from a fresh, narrow context. Developers run in parallel when tasks are independent, in sequence when they're not.
+>
+> That's ai-crew's team-lead. One brain at the wheel, scoping every task and delegating only what needs a fresh, narrow context. Guided Q&A for spec, and one human checkpoint for plan approval.
+
+---
+
 ## Demo
 
 ```
