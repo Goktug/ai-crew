@@ -4,7 +4,7 @@ Production-grade Claude Code plugin: takes any React Native or TypeScript backen
 
 ## Design (locked)
 
-See [docs/team-lead-design.md](docs/team-lead-design.md) — all eight architectural decisions are locked. Read this first before proposing changes to any of: model routing, dispatch tiers, artifact set, vendor strategy, or lifecycle phases.
+All eight architectural decisions are locked. Do not propose changes to any of: model routing, dispatch tiers, artifact set, vendor strategy, or lifecycle phases without explicit approval.
 
 ## Source of truth
 
@@ -39,8 +39,6 @@ See [docs/team-lead-design.md](docs/team-lead-design.md) — all eight architect
 - No reviewer subagents
 - No dynamic skill picker
 - No custom plan DAG format reinvention
-
-See "Not Doing" in `docs/team-lead-design.md` for full list.
 
 ## Reference projects (read-only)
 

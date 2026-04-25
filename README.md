@@ -1,10 +1,10 @@
 # ai-crew
 
-**A production-grade engineering orchestrator for Claude Code.**
+**A battle-tested, production-grade engineering orchestrator for Claude Code.**
 
 **Describe the job. Approve the plan. Get the PR.**
 
-ai-crew takes any TypeScript, Node, backend, or React Native task from a one-line description to an opened PR — with exactly one human decision point in between. One Opus brain at the wheel; many Sonnet hands at the keyboard.
+ai-crew encodes the workflows, quality gates, and best practices senior engineers run on every change — intake, spec, plan, build, verify, review, ship — and packages them as a Claude Code orchestrator for TypeScript, Node, backend, and React Native. An Opus team-lead reasons through every phase; scoped Sonnet developers handle implementation in sequence or in parallel; one human checkpoint sits between Plan and Build.
 
 Built on top of [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills) (vendored, MIT). See [§ Why this is different](#why-this-is-different) for what ai-crew adds on top.
 
@@ -294,7 +294,7 @@ The one-question-at-a-time intake pattern was popularized by the Superpowers pro
 
 ## The trust contract
 
-Guarantees pulled directly from the [architectural laws](docs/team-lead-design.md):
+Guarantees pulled directly from the locked architectural laws:
 
 - **Strict 1-level dispatch.** `developer` and `web-researcher` subagents have no `Agent` or `Task` tools by configuration. They cannot spawn further subagents.
 - **Reference-based dispatch.** Every developer prompt is under 30 lines and cites spec/plan line ranges — never embedded context, never whole-file pointers.
@@ -360,7 +360,7 @@ Both. The intake phase asks about existing patterns, conventions, and constraint
 <details>
 <summary><b>What models does ai-crew use and can I change them?</b></summary>
 
-The orchestrator (team-lead) runs on Opus for heavy reasoning — spec writing, plan quality, inline review. Developer subagents run on Sonnet: one atomized task per dispatch, no spawning of further agents. Web-researcher subagents run on Haiku: one focused question each. The model routing is a locked architectural decision because the cost-to-capability fit at each layer is deliberate. See `docs/team-lead-design.md` for the rationale.
+The orchestrator (team-lead) runs on Opus for heavy reasoning — spec writing, plan quality, inline review. Developer subagents run on Sonnet: one atomized task per dispatch, no spawning of further agents. Web-researcher subagents run on Haiku: one focused question each. The model routing is a locked architectural decision because the cost-to-capability fit at each layer is deliberate.
 
 </details>
 
@@ -384,6 +384,5 @@ Three files. That's it.
 - **[agent-skills](https://github.com/addyosmani/agent-skills)** by Addy Osmani — 21 skills vendored verbatim, MIT-licensed. The foundation this plugin is built on.
 - **Superpowers** — inspiration for the one-question-at-a-time intake pattern.
 - **[Anthropic Claude Code](https://docs.anthropic.com/claude-code)** — the runtime this plugin targets.
-- **Architecture deep-dive:** [`docs/team-lead-design.md`](docs/team-lead-design.md) — all eight architectural decisions, locked.
-- **Repository:** [github.com/goktug/ai-crew](https://github.com/goktug/ai-crew)
+- **Repository:** [github.com/Goktug/ai-crew](https://github.com/Goktug/ai-crew)
 - **License:** MIT — see [LICENSE](LICENSE).
