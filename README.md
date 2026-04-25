@@ -1,10 +1,10 @@
 # ai-crew
 
-**A production-grade engineering orchestrator for Claude Code.**
+**A battle-tested, production-grade engineering orchestrator for Claude Code.**
 
 **Describe the job. Approve the plan. Get the PR.**
 
-ai-crew takes any TypeScript, Node, backend, or React Native task from a one-line description to an opened PR — with exactly one human decision point in between. One Opus brain at the wheel; many Sonnet hands at the keyboard.
+ai-crew encodes the workflows, quality gates, and best practices senior engineers run on every change — intake, spec, plan, build, verify, review, ship — and packages them as a Claude Code orchestrator for TypeScript, Node, backend, and React Native. An Opus team-lead reasons through every phase; scoped Sonnet developers handle implementation in sequence or in parallel; one human checkpoint sits between Plan and Build.
 
 Built on top of [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills) (vendored, MIT). See [§ Why this is different](#why-this-is-different) for what ai-crew adds on top.
 
