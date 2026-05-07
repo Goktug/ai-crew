@@ -92,7 +92,7 @@ Stop. Present `plan.md` to the user. Wait for explicit approval before any file 
 
 Walk the DAG in dependency order. For each task — sequential by default, parallel within a wave when the plan declares independence — dispatch a `developer` subagent with a **reference-based prompt** under ~30 lines.
 
-The developer uses Sonnet and has only `Read, Write, Edit, Bash, Grep, Glob, Skill` tools. It cannot dispatch further subagents. It reads the spec, plan, and required skills itself. It follows TDD (write failing test → implement → green) and incremental-implementation. It returns ONLY a one-line `PASS: …` or `FAIL: …` summary.
+The developer uses Sonnet and has only `Read, Write, Edit, Bash, Grep, Glob, Skill, mcp__figma` tools. It cannot dispatch further subagents. It reads the spec, plan, and required skills itself. It follows TDD (write failing test → implement → green) and incremental-implementation. It returns ONLY a one-line `PASS: …` or `FAIL: …` summary.
 
 After each developer dispatch, the team-lead checks the box for that task in `progress.md` (PASS) or marks it failed (FAIL).
 
@@ -116,6 +116,10 @@ Files to touch (per plan task):
   - src/permissions/notifications.ts (new)
   - src/permissions/notifications.test.ts (new)
   - src/screens/Onboarding/PermissionStep.tsx (modify)
+
+Figma refs (optional, only when the task implements a Figma design):
+  - https://figma.com/design/<fileKey>/<name>?node-id=<nodeId>
+  (developer calls mcp__figma__get_design_context with these; treat output as reference, adapt to project stack)
 
 Verification command: pnpm test src/permissions/notifications
 
