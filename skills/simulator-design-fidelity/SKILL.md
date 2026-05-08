@@ -100,29 +100,29 @@ If the projector errors, emit `FAIL` with its stderr. Do not hand-roll a partial
 
 #### 3e. Judge the Difference
 
-You — the simulator-engineer — are the judge. Read `app.json`, `figma.json`, `app.png`, `figma.png`, and the cited `Spec refs` lines side by side. Identify differences between the design and the implementation along these dimensions:
+You — the simulator-engineer — are the judge. Read `app.json`, `figma.json`, `app.png`, `figma.png`, and the cited `Spec refs` lines side by side. Identify differences between the design and the implementation along these **kinds**:
 
 - **identity** — the app rendered a different element than the design specified, or rendered nothing where the design specified something
 - **layout** — anchor, grouping, ordering, or positioning intent of the design is not preserved
 - **style** — color, typography, spacing, corner radius, or other styling token applied incorrectly
 - **copy** — visible text the design specifies (titles, labels, button copy) does not match
-- **ambiguous** — the mapping between Figma node and app node is unclear and cannot be resolved confidently
 
 When classifying:
 - **Name differences alone are not identity deltas.** Designer "Card" vs dev "ReviewCard" is not a bug — the tree shapes still align. Identity fires only when the element itself is structurally missing or replaced.
 - **Style judgments come from the screenshots, not hex equality.** `fill` and `font` in the projector output are advisory; CSS-variable resolution drifts between rendering pipelines, so visually identical tokens may report different hex values. **But when Figma specifies a non-system `font.family` for a node, visually confirm the app rendered that font** — a missing custom font that silently falls back to the system bold is one of the most common visible style bugs and is easy to overlook because the screenshot still "looks like text".
 - **Layout judgments use `frame` (screen-absolute pt) on both sides**, but factor in any difference between the design's `frame` size and the simulator's pt viewport. Predictable shifts caused by running on a wider/taller device than the design intended are not bugs.
 
-For every candidate difference, classify whether it represents a real implementation bug or a data-driven difference:
+**Drop entirely (do not emit):**
+- Differences caused by real runtime data the mock could not anticipate. The user's actual name vs. "John Doe". A list of 47 real reviews vs. 4 mock cards. A chart's bars sized by real metrics. The team-lead has no fix to dispatch for these. If transparency matters, mention them once under `NOTES`.
 
-- A real implementation bug: the developer missed or misinterpreted the design.
-- A data-driven difference: content varies because the app reads real data the mock doesn't have. The user's actual name vs. "John Doe". A list of 47 real reviews vs. 4 mock cards. A chart's bars sized by real metrics. Drop these from the report — the team-lead has no fix to dispatch. If transparency matters, mention them once under `NOTES`.
+**Emit with a confidence tag.** Every emitted delta carries one of four tags. The first three express *confidence + magnitude* for confirmed discrepancies; the fourth flags uncertainty.
 
-Severity guidance:
+- `[high]` — confidently a real discrepancy; structural element missing, in the wrong place, or replaced
+- `[medium]` — confidently a real styling or copy discrepancy
+- `[low]` — confidently a real but small discrepancy (a contraction the designer wrote one way and the dev shipped another, a 4px shadow drift, a glyph swap that's still visibly different)
+- `[ambiguous]` — *uncertain* whether the difference is a bug or an intentional designer/product change. Use this when you can see the difference but cannot defend a confident verdict either way. Examples: a copy refinement that may have been requested by product after the spec; a Figma layer that may have been renamed without a code update.
 
-- `high` — a structural element from the design is missing, in the wrong place, or rendered with the wrong identity
-- `medium` — a styling or copy difference that is plainly designer intent, not a data variation
-- `low` — small visual differences that may or may not be material, surfaced for the team-lead's judgment
+Severity is **magnitude only**, not a budget gate. The team-lead auto-fixes every confident delta regardless of severity — small confirmed bugs are still bugs. `[ambiguous]` deltas bypass auto-fix and are surfaced to a human at PR time.
 
 Cite a Figma `node_id` per delta. If you cannot cite one, the difference is unanchored — the team-lead has nothing to point a fix-developer at — and it should not be reported.
 
@@ -130,8 +130,8 @@ Cite a Figma `node_id` per delta. If you cannot cite one, the difference is unan
 
 Use the output format defined in `<plugin>/agents/simulator-engineer.md`. Hard rules:
 
-- Max 25 deltas per gate. If you would exceed it, keep the highest-severity entries and append `... and N more`.
-- Each delta is a single line: `[<severity>] <kind> @ <node_id> "<short label>" — <evidence>`.
+- Max 25 deltas per gate. If you would exceed it, keep the highest-severity confident entries first, then `[ambiguous]` items, and append `... and N more`.
+- Each delta is a single line: `[<tag>] <kind> @ <node_id> "<short label>" — <evidence>`. `<tag>` ∈ `{high, medium, low, ambiguous}`.
 - No raw tree dumps, no inline JSON, no normalized payloads, no screenshot bytes.
 - One block per member screen; the overall `RESULT` is the worst of the per-screen results.
 - Drop any delta whose evidence reduces to "the data is different".
@@ -202,7 +202,9 @@ The first screen matched; the second was unreachable. Overall verdict is `FAIL` 
 
 | Rationalization | Reality |
 |---|---|
-| "I'll dump the full normalized JSON so the team-lead can judge it themselves." | No. You are the judge. The team-lead reads classified deltas with severity and node ids. Raw dumps blow up the orchestrator's context. |
+| "I'll dump the full normalized JSON so the team-lead can judge it themselves." | No. You are the judge. The team-lead reads classified deltas with confidence tags and node ids. Raw dumps blow up the orchestrator's context. |
+| "This `[low]` delta isn't worth fixing — I'll mark it ambiguous so the human decides." | No. `[ambiguous]` means *you can't decide*, not *it's small*. If you're confident the difference is real but minor, tag it `[low]` — the team-lead will auto-fix it. Mis-using `[ambiguous]` to dodge fixes erodes the gate's value. |
+| "I'll mark a confident `[low]` issue as `[medium]` so the team-lead takes it more seriously." | Don't manipulate severity to influence routing — every confident tag gets fixed. Severity is *magnitude only*; the team-lead uses it to prioritize within a batch and summarize in the PR, not to gate fixes. |
 | "The user's display name differs — that's a copy delta." | No, that's data. Real users have real names. Drop it from the report; mention it under `NOTES` if context matters. |
 | "The reviews list shows 47 items vs. 4 in the mock — that's a layout delta." | No, that's data. The container exists where the design said it should; its contents are real data the mock could not anticipate. |
 | "I noticed something looks off but I can't find a node id for it." | Then it doesn't get reported. Unanchored deltas cannot be routed to a fix-developer; they erode the team-lead's trust. Spend the time finding the id, or omit. |
@@ -234,7 +236,8 @@ Before reporting `RESULT`:
 
 - [ ] Component tree, screenshot, Figma metadata, Figma design context, and Figma screenshot captured for every member screen — or `FAIL`-ed with a reason
 - [ ] `normalize.mjs argent` and `normalize.mjs figma` ran successfully for every member screen
-- [ ] Every emitted delta carries a `[<severity>]`, a `<kind>`, a Figma `node_id`, a short label, and an evidence clause
+- [ ] Every emitted delta carries a `[<tag>]` where tag is `high`/`medium`/`low`/`ambiguous`, a `<kind>`, a Figma `node_id`, a short label, and an evidence clause
+- [ ] Confidence tags reflect what the rule says: `high`/`medium`/`low` only when *confident* the difference is a real discrepancy (severity = magnitude only); `ambiguous` only when the judge truly cannot decide bug-vs-intent. No tag inflation, no tag deflation.
 - [ ] Differences caused by real runtime data are excluded from the report (or noted under `NOTES` for transparency, not as deltas)
 - [ ] Total deltas across the gate ≤ 25; truncation message present if higher
 - [ ] One block per member screen; overall `RESULT` is the worst per-screen verdict
