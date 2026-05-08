@@ -34,8 +34,18 @@ failed=0
 #     to references/asking-clarifying-questions.md so every
 #     ai-crew skill that asks questions shares the same
 #     one-question-at-a-time + trade-off-led behavior.
+#
+#   skills/using-agent-skills/SKILL.md
+#     The meta-skill is the team-lead's discovery surface for every
+#     other skill. ai-crew custom skills (e.g. simulator-design-fidelity)
+#     and project-type addenda (e.g. react-native-fidelity-gates) must
+#     be discoverable through it, so the flowchart, Quick Reference,
+#     and Skill Rules carry registration entries. CLAUDE.md non-negotiable
+#     #5 was relaxed for this one file specifically; all other vendored
+#     skills remain frozen.
 ALLOWED_DIVERGENT=(
   "skills/idea-refine/SKILL.md"
+  "skills/using-agent-skills/SKILL.md"
 )
 
 filter_allowed_divergent() {
