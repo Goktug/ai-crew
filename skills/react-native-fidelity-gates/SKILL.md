@@ -62,12 +62,23 @@ Before writing the dispatch prompt, the team-lead fetches the design side for ev
 For each `figma_ref` (extracted from the matching UI task's plan entry):
 
 ```
-mcp__figma__get_metadata        { fileKey, nodeId } → write to <gate-dir>/<n>.meta.xml
-mcp__figma__get_design_context  { fileKey, nodeId } → write to <gate-dir>/<n>.ctx.code
-mcp__figma__get_screenshot      { fileKey, nodeId } → write to <gate-dir>/<n>.figma.png
+1. mcp__figma__get_metadata { fileKey, nodeId }
+   → response is XML text
+   → write the response body to <gate-dir>/<n>.meta.xml using the Write tool
+
+2. mcp__figma__get_design_context { fileKey, nodeId, excludeScreenshot: true }
+   → response is React+Tailwind code text (with trailing prose that's harmless to keep)
+   → write the response body to <gate-dir>/<n>.ctx.code using the Write tool
+
+3. mcp__figma__get_screenshot { fileKey, nodeId }
+   → response is JSON { image_url, width, height, format } — NOT the PNG itself
+   → run Bash:  curl -s -o <gate-dir>/<n>.figma.png "<image_url>"
+   → the URL is short-lived; download immediately, do not cache
 ```
 
 Where `<gate-dir>` is `~/.claude/ai-crew/runs/<run-id>/gates/<gate-id>/` and `<n>` is the member-screen index (1-based) or a slug derived from `nav_hint`.
+
+**Important:** the screenshot path is a two-step MCP-then-Bash dance. The MCP call returns a URL; the team-lead must `curl` that URL into the file. Skipping the curl leaves no PNG on disk and the subagent will `FAIL` reading it. After all three writes, verify with `ls -la <gate-dir>` that exactly three files per screen exist with non-zero size before dispatching the gate.
 
 If any Figma fetch fails, do not dispatch the gate — surface the fetch error to the user. The simulator-engineer cannot recover from a missing artifact (it has no `mcp__figma`); a missing file is a dispatch bug.
 
