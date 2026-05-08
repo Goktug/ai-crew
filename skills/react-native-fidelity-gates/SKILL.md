@@ -82,32 +82,60 @@ Member screens (one per UI task in this epic):
 Return: RESULT: MATCH | DELTA | FAIL with structured deltas per member screen.
 ```
 
-### Action policy — advisory, not blocking
+### Action policy — fix every confirmed discrepancy
 
-After the gate returns, the team-lead reads the structured block inline and picks one of four actions. **Gates never auto-block the lifecycle.** The orchestrator decides; the gate produces evidence.
+After the gate returns, the team-lead reads the structured block inline and routes by the judge's confidence, not by severity. The judge's classification is binary at delta time:
+
+- **Confident** — the delta is tagged `[high]`, `[medium]`, or `[low]`. Severity describes magnitude; all three signal "this is a real implementation discrepancy." Auto-fix.
+- **Uncertain** — the delta is tagged `[ambiguous]`. The judge cannot decide whether the difference is a bug or an intentional designer/product change. Surface to a human; do not auto-fix.
 
 | Result | Action | DAG effect |
 |---|---|---|
 | `MATCH` | Annotate `progress.md`. Continue. | None |
-| `DELTA` (material — missing component, wrong copy, structural mismatch) | Insert a focused-fix developer task with the deltas as context, then re-dispatch the `simulator-engineer` for re-verification. | One cycle, counts toward the **shared 3-loop budget** (see below). |
-| `DELTA` (intentional deviation, designer changed mind, ambiguous mapping) | Annotate `progress.md` and flag in PR description for human review. Continue. | None |
-| `FAIL` (simulator unbootable, app crashed, navigation lost) | Surface to user; do not auto-loop more than once on infrastructure failures. | Counts as one loop. |
+| `DELTA` with at least one confident item (`high`/`medium`/`low`) | Dispatch a focused-fix developer task carrying every confident delta. Re-dispatch the `simulator-engineer` to verify the fix. Repeat until convergence. | One cycle per pass, counts against the **gate's own loop budget** (see below). |
+| `DELTA` with only ambiguous items | Annotate `progress.md` and **append a "Fidelity findings" section to the PR body** with each ambiguous delta's node id, evidence, and the judge's reasoning. No fix dispatch. | None |
+| `DELTA` mixed (confident + ambiguous) | Auto-fix the confident batch as above. The ambiguous items always go into the PR's "Fidelity findings" section, even after the gate converges to MATCH on the confident set. | One cycle, counts as above. |
+| `FAIL` (simulator unbootable, app crashed, navigation lost) | Surface to user; one infrastructure retry max before escalating. | Counts against the gate's budget. |
 
-## Phases 7–8 amendment — shared retry budget
+The principle: if the judge confirmed a discrepancy, fix it — small bugs are still bugs. Severity exists only to help the fix-developer prioritize within a batch and to summarize the gate's findings in the PR description.
 
-The team-lead's base retry budget is **max 3 fix loops** for Verify + Review combined. On RN runs this skill extends that definition: gate-driven focused-fix dispatches share the same budget. The total across all three sources (Verify, Review, fidelity-gate fixes) must not exceed three before escalating to the user. There is no per-source quota.
+## Phases 7–8 amendment — convergence-based gate budget
 
-Concretely: if Verify already burned two loops on a typecheck regression, a single material `DELTA` is the third and final loop; subsequent material deltas escalate.
+Verify and Review keep their existing **3 shared fix loops**. The fidelity gate is **independent** from that budget — gate-driven fix dispatches do not consume Verify/Review's loops, and Verify/Review failures do not eat into the gate's capacity.
+
+The gate's own budget is **convergence-based, not count-based**:
+
+```
+loop:
+  N      = count of confident deltas in latest gate run
+  if N == 0:                       MATCH — done
+  dispatch fix-developer with the confident batch
+  re-run simulator-engineer
+  N'     = count of confident deltas in the new run
+  if N' == 0:                      MATCH — done
+  if N' >= N:                      not converging — escalate to user
+  cycle_count += 1
+  if cycle_count >= 10:            runaway brake — escalate to user
+  goto loop
+```
+
+Why this shape:
+- **No arbitrary count cap on quality.** The gate keeps fixing as long as each pass reduces confident deltas. A 7-bug screen converges in 1–2 cycles when the developer can see all the bugs at once.
+- **Regression detection built in.** If a fix attempt makes things worse or stays flat, that's the signal that the developer can't fix it (missing asset, framework limitation, design ambiguity not caught at judge time). Escalate immediately.
+- **Hard ceiling at 10 is a runaway brake, not a target.** A real run converges in ≤3 cycles. Hitting 10 means something is fundamentally broken; the user must see it.
+- **Independent from Verify/Review.** A flaky test burning Verify's loops doesn't starve the gate, and the gate dispatching fixes doesn't keep Verify from converging on a real regression.
 
 ## Common Rationalizations
 
 | Rationalization | Reality |
 |---|---|
 | "I'll add a fidelity gate even though the project is a backend service." | This skill is not loaded on backend services. If you find yourself reading it, the project is RN. If you're reasoning about backend work, exit this skill and rely on `team-lead` alone. |
-| "Fidelity gates should fail the run on any delta." | Gates are advisory. Material deltas trigger one focused-fix developer dispatch (counted against the shared 3-loop budget); ambiguous deltas annotate and continue. The gate produces evidence; the team-lead decides. |
+| "Fidelity gates should fail the run on any delta." | Gates do not block the lifecycle. Confident deltas (`high`/`medium`/`low`) trigger a focused-fix developer dispatch and a re-run; ambiguous deltas surface to the PR for human review. The gate produces evidence and converges; the team-lead orchestrates. |
+| "Low-severity deltas aren't worth fixing — annotate and move on." | If the judge tagged it with a severity, the judge is *confident* it's a real discrepancy. Severity is magnitude, not certainty. A 4px shadow mismatch is still a token mismatch — fix it. Use `[ambiguous]` when the judge actually can't decide; that's the only tag that bypasses auto-fix. |
 | "I'll dispatch a fidelity gate per UI task to catch regressions sooner." | One gate per contiguous UI epic. Per-task gates serialize the simulator and shred parallelism within the epic for marginal benefit — RNTL already covers per-task structural correctness. |
 | "I'll let two `simulator-engineer`s run in parallel — they're cheap subagents." | The simulator is a singleton. The DAG never schedules two `simulator-engineer` dispatches concurrently because the team-lead never spawns two at once. If a future plan accidentally asks for it, the second dispatch must `FAIL` rather than race. |
-| "The fidelity-gate retries should have their own budget separate from Verify and Review." | They share. The 3-loop cap is total across Verify, Review, and gate-driven fixes. A run with no Verify/Review failures has up to three gate loops; a run that already burned two on Verify has only one left for gates. |
+| "The fidelity gate's fix loops should share Verify and Review's budget." | They are independent. Verify+Review keep their 3 shared loops; the gate has its own convergence-based budget. A flaky test burning Verify's budget does not starve the gate, and the gate's auto-fix loops do not block Verify from converging. |
+| "I'll keep looping the gate as long as it finds anything." | Loop only while confident-delta count is *decreasing*. Same-or-worse counts mean the developer can't fix the underlying issue (missing asset, framework limitation) — escalate. Hard cap at 10 is a runaway brake, never expected to hit. |
 
 ## Red Flags
 
@@ -116,7 +144,9 @@ Stop and reconsider if you notice any of these — they are the moves this skill
 - About to spawn two `simulator-engineer` dispatches in the same wave.
 - About to emit a fidelity gate for a plan with no UI tasks (no `frontend-ui-engineering` or `mobile-component-testing-with-rntl` skill tags).
 - About to treat a fidelity-gate `DELTA` as a hard fail.
-- About to keep looping past the shared 3-loop budget on gate-driven fixes.
+- About to skip auto-fix on a `[low]`-severity confident delta because "it's not worth fixing." All confident deltas get fixed; only `[ambiguous]` items bypass auto-fix.
+- About to charge gate-driven fix loops against Verify/Review's 3-loop budget (or vice versa). Those budgets are independent.
+- About to keep looping the gate after a pass that did not reduce the confident-delta count. That's the escalation signal.
 - About to add a fidelity-gate entry to `plan.md` after Phase 5 (the plan is frozen at the checkpoint, gates included).
 - About to embed raw component-tree dumps or screenshot bytes from a `simulator-engineer` reply into team-lead context — read the structured `RESULT` block only; the full evidence already lives in Argent's auto-screenshot dir.
 
@@ -126,6 +156,9 @@ Before declaring an RN run complete, in addition to the base team-lead verificat
 
 - [ ] If the plan had at least one UI task (`frontend-ui-engineering` or `mobile-component-testing-with-rntl` skill tag), exactly one fidelity gate was emitted per contiguous UI epic; gates were dispatched sequentially, never two in the same wave.
 - [ ] Every `simulator-engineer` dispatch cited `Plan task` + `Spec refs` line ranges from the Task Index / Section Index — no whole-file pointers.
-- [ ] Any gate-driven focused-fix developer dispatch was counted against the shared 3-loop budget alongside Verify and Review (total ≤ 3).
+- [ ] Every confident delta (`high`/`medium`/`low`) the gate reported was either fixed (gate converged to MATCH on the confident set) or surfaced to the user via escalation. No confident delta was silently dropped.
+- [ ] Every ambiguous delta the gate reported was annotated in `progress.md` and appended to the PR's "Fidelity findings" section for human review.
+- [ ] Gate-driven fix loops were counted against the gate's own convergence budget, NOT against Verify/Review's 3-loop budget. The two budgets stayed independent.
+- [ ] The gate did not loop past a pass that failed to reduce the confident-delta count; non-converging passes escalated to the user.
 - [ ] No `MATCH` was claimed for a gate where one or more member screens returned a navigation `FAIL`. Partial coverage is not coverage.
 - [ ] No raw component trees, raw Figma JSON, or screenshot bytes were inlined into `progress.md` — only the structured `RESULT` block and any classified deltas.
