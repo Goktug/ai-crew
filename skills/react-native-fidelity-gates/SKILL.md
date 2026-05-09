@@ -51,7 +51,7 @@ Emission rules:
 
 ## Phase 6 amendment — `simulator-engineer` dispatch
 
-Fidelity-gate tasks dispatch `simulator-engineer` instead of `developer`. The `simulator-engineer` uses Sonnet and has only `Read, Bash, Grep, Glob, Skill, mcp__argent` tools. **It does not have `mcp__figma`** — Claude Code's MCP propagation does not reliably pass main-session MCP servers into subagent dispatches, so the team-lead pre-fetches all Figma artifacts on its side before dispatching. The subagent reads them from disk. This makes the gate robust to the propagation gap and keeps the artifacts inspectable for the user.
+Fidelity-gate tasks dispatch `simulator-engineer` instead of `developer`. The `simulator-engineer` uses **Opus** (the judgment step — distinguishing real bugs from intent, classifying confidence, comparing typography and color visually — is the most reliability-sensitive piece of the gate, and Sonnet has been observed to miss subtle deltas like a custom-font fallback). It has only `Read, Bash, Grep, Glob, Skill, mcp__argent` tools. **It does not have `mcp__figma`** — Claude Code's MCP propagation does not reliably pass main-session MCP servers into subagent dispatches, so the team-lead pre-fetches all Figma artifacts on its side before dispatching. The subagent reads them from disk. This makes the gate robust to the propagation gap and keeps the artifacts inspectable for the user.
 
 The simulator-engineer cannot dispatch further subagents. It is read-only on the codebase. It returns a structured `RESULT:` block per member screen, not a one-line PASS/FAIL summary.
 
