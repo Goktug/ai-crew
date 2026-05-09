@@ -64,19 +64,23 @@ For each `figma_ref` (extracted from the matching UI task's plan entry):
 ```
 1. mcp__figma__get_metadata { fileKey, nodeId }
    → response is XML text
-   → write the response body to <gate-dir>/<n>.meta.xml using the Write tool
+   → write the response body to <gate-dir>/<slug>.meta.xml using the Write tool
 
 2. mcp__figma__get_design_context { fileKey, nodeId, excludeScreenshot: true }
    → response is React+Tailwind code text (with trailing prose that's harmless to keep)
-   → write the response body to <gate-dir>/<n>.ctx.code using the Write tool
+   → write the response body to <gate-dir>/<slug>.ctx.code using the Write tool
 
 3. mcp__figma__get_screenshot { fileKey, nodeId }
    → response is JSON { image_url, width, height, format } — NOT the PNG itself
-   → run Bash:  curl -s -o <gate-dir>/<n>.figma.png "<image_url>"
+   → run Bash:  curl -s -o <gate-dir>/<slug>.figma.png "<image_url>"
    → the URL is short-lived; download immediately, do not cache
 ```
 
-Where `<gate-dir>` is `~/.claude/ai-crew/runs/<run-id>/gates/<gate-id>/` and `<n>` is the member-screen index (1-based) or a slug derived from `nav_hint`.
+Where:
+- `<gate-dir>` is `~/.claude/ai-crew/runs/<run-id>/gates/<gate-id>/`
+- `<slug>` is the **Figma node id with `:` replaced by `-`** (e.g. `1:1217` → `1-1217`, `417:17249` → `417-17249`).
+
+**Why node-id naming, not positional indexing:** node ids are globally unique within the Figma file, self-documenting (you can tell which design node a file came from at a glance), and stable across re-runs and plan edits. Positional naming (`1.meta.xml`, `2.meta.xml`, …) is fragile because a member-screen reorder in `plan.md` between runs would silently re-map the same path to a different node and make on-disk debugging confusing. With node-id naming, re-fetching the same node is harmless (same path, same content) and inspecting `<gate-dir>` tells the user exactly which screens were captured.
 
 **Important:** the screenshot path is a two-step MCP-then-Bash dance. The MCP call returns a URL; the team-lead must `curl` that URL into the file. Skipping the curl leaves no PNG on disk and the subagent will `FAIL` reading it. After all three writes, verify with `ls -la <gate-dir>` that exactly three files per screen exist with non-zero size before dispatching the gate.
 
@@ -107,15 +111,17 @@ App:         { "bundleId": "com.example.MyApp" }
 
 Member screens (one per UI task in this epic):
   - nav_hint: "settings → notifications"
+    node_id:   45:678
     figma_files:
-      meta:       ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/1.meta.xml
-      ctx:        ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/1.ctx.code
-      screenshot: ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/1.figma.png
+      meta:       ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/45-678.meta.xml
+      ctx:        ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/45-678.ctx.code
+      screenshot: ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/45-678.figma.png
   - nav_hint: "profile → edit"
+    node_id:   99:101
     figma_files:
-      meta:       ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/2.meta.xml
-      ctx:        ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/2.ctx.code
-      screenshot: ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/2.figma.png
+      meta:       ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/99-101.meta.xml
+      ctx:        ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/99-101.ctx.code
+      screenshot: ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/99-101.figma.png
 
 Return: RESULT: MATCH | DELTA | FAIL with structured deltas per member screen.
 ```

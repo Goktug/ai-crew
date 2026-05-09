@@ -73,11 +73,11 @@ Save the structural tree to disk as `app.tree.json`. Note the screenshot path Ar
 
 #### 3c. Read the Pre-Fetched Figma Artifacts
 
-The simulator-engineer does **not** call Figma MCP. The team-lead fetched the design side before dispatching and wrote three files per screen to a path it gave you under each member screen's `figma_files` field:
+The simulator-engineer does **not** call Figma MCP. The team-lead fetched the design side before dispatching and wrote three files per screen to a path it gave you under each member screen's `figma_files` field. The filename slug is the Figma node id with `:` replaced by `-` (e.g. node `1:1217` → file `1-1217.meta.xml`); the slug guarantees no collision between member screens within a gate and between re-runs of the same gate.
 
-- `<screen>.meta.xml`  — `mcp__figma__get_metadata` response (structural backbone: node ids, names, parent-relative frames). Plain XML.
-- `<screen>.ctx.code`  — `mcp__figma__get_design_context` response (React+Tailwind with `data-node-id` back-references; source for visible text and style tokens). Plain text; trailing prose blocks are present in the raw response and are harmless — the projector only matches `data-node-id` elements.
-- `<screen>.figma.png` — the rendered design. The team-lead obtained this via `mcp__figma__get_screenshot` (which returned a short-lived URL) and then `curl`-ed the URL into the file. The PNG is the canonical visual reference for the judge.
+- `<node-slug>.meta.xml`  — `mcp__figma__get_metadata` response (structural backbone: node ids, names, parent-relative frames). Plain XML.
+- `<node-slug>.ctx.code`  — `mcp__figma__get_design_context` response (React+Tailwind with `data-node-id` back-references; source for visible text and style tokens). Plain text; trailing prose blocks are present in the raw response and are harmless — the projector only matches `data-node-id` elements.
+- `<node-slug>.figma.png` — the rendered design. The team-lead obtained this via `mcp__figma__get_screenshot` (which returned a short-lived URL) and then `curl`-ed the URL into the file. The PNG is the canonical visual reference for the judge.
 
 Read each file via the `Read` tool. The metadata is the structural backbone; the design context provides text content and style tokens; the screenshot is the visual ground truth the judge reads.
 

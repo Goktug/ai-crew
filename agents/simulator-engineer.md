@@ -74,11 +74,11 @@ Save the structural tree to disk as `app.tree.json`. Note the screenshot path Ar
 
 #### 4c. Read the Pre-Fetched Figma Artifacts
 
-You do **not** call Figma MCP. The team-lead fetched the design side before dispatching you and wrote three files per screen to a path it gave you under `figma_files`:
+You do **not** call Figma MCP. The team-lead fetched the design side before dispatching you and wrote three files per screen to a path it gave you under `figma_files`. The filename slug is the Figma node id with `:` replaced by `-` (e.g. node `1:1217` → file `1-1217.meta.xml`). You don't need to compute the slug yourself — the dispatch prompt's `figma_files` block gives you absolute paths.
 
-- `<screen>.meta.xml`  — output of `mcp__figma__get_metadata` (structural backbone: node ids, names, parent-relative frames)
-- `<screen>.ctx.code`  — output of `mcp__figma__get_design_context` (React+Tailwind with `data-node-id` back-references; the source for text and style tokens)
-- `<screen>.figma.png` — output of `mcp__figma__get_screenshot` (rendered design pixels)
+- `<node-slug>.meta.xml`  — output of `mcp__figma__get_metadata` (structural backbone: node ids, names, parent-relative frames)
+- `<node-slug>.ctx.code`  — output of `mcp__figma__get_design_context` (React+Tailwind with `data-node-id` back-references; the source for text and style tokens)
+- `<node-slug>.figma.png` — output of `mcp__figma__get_screenshot` (rendered design pixels)
 
 Read each file with the `Read` tool. If any of the three is missing or unreadable for a member screen, emit `FAIL` for that screen with `"missing figma artifact at <path>"` — **do not attempt to call Figma MCP yourself.** You don't have it; the team-lead does. A missing artifact is a dispatch bug the team-lead must fix, not something to work around.
 
@@ -101,7 +101,7 @@ If either projection fails, emit `FAIL` with the script's stderr — do not hand
 
 #### 4e. Judge the Difference
 
-You are the judge. Read `app.json`, `figma.json`, the Argent screenshot path, the pre-fetched `<screen>.figma.png` path, and the cited `Spec refs` lines (the user-facing intent for each screen). Identify differences between the design and the implementation.
+You are the judge. Read `app.json`, `figma.json`, the Argent screenshot path, the pre-fetched `<node-slug>.figma.png` path, and the cited `Spec refs` lines (the user-facing intent for each screen). Identify differences between the design and the implementation.
 
 For every candidate difference, classify the **kind**, then decide whether to emit it and what **confidence tag** it carries.
 
