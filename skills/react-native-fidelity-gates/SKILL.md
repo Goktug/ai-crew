@@ -40,7 +40,7 @@ The gate task is a regular `plan.md` entry — same `### T-NNN ...` heading, sam
 
 - **Agent**: `simulator-engineer`
 - **Skills to read first**: `simulator-design-fidelity` (plus the Argent skills installed by `argent init` in the project — `argent-simulator-setup`, `argent-react-native-app-workflow`, `argent-test-ui-flow`; the team-lead assumes these are pre-installed and does not run `argent init` itself)
-- **Inputs**: per-member-screen `(figma_ref, nav_hint)` pairs, taken from each member UI task's existing `figma_ref` field
+- **Inputs**: per-member-screen `nav_hint` from the UI task plus `figma_files` paths the team-lead populates during pre-flight (see Phase 6). The original `figma_ref` URL is recorded in `progress.md` for traceability but is *not* what the subagent receives.
 
 Emission rules:
 
@@ -51,11 +51,46 @@ Emission rules:
 
 ## Phase 6 amendment — `simulator-engineer` dispatch
 
-Fidelity-gate tasks dispatch `simulator-engineer` instead of `developer`. The `simulator-engineer` uses Sonnet and has only `Read, Bash, Grep, Glob, Skill, mcp__figma, mcp__argent` tools. It cannot dispatch further subagents. It is read-only on the codebase. It returns a structured `RESULT:` block per member screen, not a one-line PASS/FAIL summary.
+Fidelity-gate tasks dispatch `simulator-engineer` instead of `developer`. The `simulator-engineer` uses **Opus** (the judgment step — distinguishing real bugs from intent, classifying confidence, comparing typography and color visually — is the most reliability-sensitive piece of the gate, and Sonnet has been observed to miss subtle deltas like a custom-font fallback). It has only `Read, Bash, Grep, Glob, Skill, mcp__argent` tools. **It does not have `mcp__figma`** — Claude Code's MCP propagation does not reliably pass main-session MCP servers into subagent dispatches, so the team-lead pre-fetches all Figma artifacts on its side before dispatching. The subagent reads them from disk. This makes the gate robust to the propagation gap and keeps the artifacts inspectable for the user.
+
+The simulator-engineer cannot dispatch further subagents. It is read-only on the codebase. It returns a structured `RESULT:` block per member screen, not a one-line PASS/FAIL summary.
+
+### Pre-flight — team-lead fetches Figma artifacts
+
+Before writing the dispatch prompt, the team-lead fetches the design side for every member screen and writes three files per screen to a per-gate directory under the run state.
+
+For each `figma_ref` (extracted from the matching UI task's plan entry):
+
+```
+1. mcp__figma__get_metadata { fileKey, nodeId }
+   → response is XML text
+   → write the response body to <gate-dir>/<slug>.meta.xml using the Write tool
+
+2. mcp__figma__get_design_context { fileKey, nodeId, excludeScreenshot: true }
+   → response is React+Tailwind code text (with trailing prose that's harmless to keep)
+   → write the response body to <gate-dir>/<slug>.ctx.code using the Write tool
+
+3. mcp__figma__get_screenshot { fileKey, nodeId }
+   → response is JSON { image_url, width, height, format } — NOT the PNG itself
+   → run Bash:  curl -s -o <gate-dir>/<slug>.figma.png "<image_url>"
+   → the URL is short-lived; download immediately, do not cache
+```
+
+Where:
+- `<gate-dir>` is `~/.claude/ai-crew/runs/<run-id>/gates/<gate-id>/`
+- `<slug>` is the **Figma node id with `:` replaced by `-`** (e.g. `1:1217` → `1-1217`, `417:17249` → `417-17249`).
+
+**Why node-id naming, not positional indexing:** node ids are globally unique within the Figma file, self-documenting (you can tell which design node a file came from at a glance), and stable across re-runs and plan edits. Positional naming (`1.meta.xml`, `2.meta.xml`, …) is fragile because a member-screen reorder in `plan.md` between runs would silently re-map the same path to a different node and make on-disk debugging confusing. With node-id naming, re-fetching the same node is harmless (same path, same content) and inspecting `<gate-dir>` tells the user exactly which screens were captured.
+
+**Important:** the screenshot path is a two-step MCP-then-Bash dance. The MCP call returns a URL; the team-lead must `curl` that URL into the file. Skipping the curl leaves no PNG on disk and the subagent will `FAIL` reading it. After all three writes, verify with `ls -la <gate-dir>` that exactly three files per screen exist with non-zero size before dispatching the gate.
+
+If any Figma fetch fails, do not dispatch the gate — surface the fetch error to the user. The simulator-engineer cannot recover from a missing artifact (it has no `mcp__figma`); a missing file is a dispatch bug.
+
+**Why pre-flight, not in-subagent fetch:** the team-lead has Figma MCP reliably (it's the main session). Subagents do not. Pre-fetching once on the team-lead side is cheaper, more robust to MCP propagation gaps, and produces inspectable on-disk artifacts the user can review.
 
 ### Dispatch template
 
-The dispatch prompt is ≤30 lines, like a developer dispatch, and cites line ranges from the Task Index and Section Index — never embeds spec/plan content, never points at whole files. Every dispatch MUST include a `Plan task` range and at least one `Spec refs` range. The shape is the same as a developer dispatch but carries `Member screens` instead of `Files to touch`:
+The dispatch prompt is ≤30 lines, cites line ranges from the Task Index and Section Index, and references the pre-fetched Figma files by absolute path. Every dispatch MUST include a `Plan task` range and at least one `Spec refs` range.
 
 ```
 Task: T-007-fidelity — Design fidelity gate for Settings epic
@@ -70,17 +105,28 @@ Skills to read first:
   - argent-react-native-app-workflow
   - argent-test-ui-flow
 
-Simulator: first booted iPhone
-App: { "bundleId": "com.example.MyApp" }
+Simulator:   first booted iPhone
+Viewport-pt: 393x852    (look up from list-simulators if uncertain)
+App:         { "bundleId": "com.example.MyApp" }
 
 Member screens (one per UI task in this epic):
-  - figma_ref: https://figma.com/design/<fileKey>/<name>?node-id=<nodeId>
-    nav_hint: "settings → notifications"
-  - figma_ref: https://figma.com/design/<fileKey>/<name>?node-id=<nodeId2>
-    nav_hint: "profile → edit"
+  - nav_hint: "settings → notifications"
+    node_id:   45:678
+    figma_files:
+      meta:       ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/45-678.meta.xml
+      ctx:        ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/45-678.ctx.code
+      screenshot: ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/45-678.figma.png
+  - nav_hint: "profile → edit"
+    node_id:   99:101
+    figma_files:
+      meta:       ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/99-101.meta.xml
+      ctx:        ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/99-101.ctx.code
+      screenshot: ~/.claude/ai-crew/runs/2026-04-14-push-notif/gates/T-007/99-101.figma.png
 
 Return: RESULT: MATCH | DELTA | FAIL with structured deltas per member screen.
 ```
+
+The subagent reads the three files via the `Read` tool — no Figma MCP call required. The team-lead retains the original `figma_ref` (URL or `fileKey/nodeId`) in `progress.md` for traceability.
 
 ### Action policy — fix every confirmed discrepancy
 

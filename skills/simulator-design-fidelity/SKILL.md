@@ -32,7 +32,7 @@ The fidelity gate is a single DAG node. The agent runs all member-screen compari
 - Read `<plugin>/skills/using-agent-skills/SKILL.md`.
 - Read the cited `plan.md` task range. Confirm the gate ID matches the prompt's `Task:` line.
 - Read the cited `spec.md` ranges to understand the user-facing intent of each member screen — judgment is grounded in intent, not pixel-equivalence.
-- List the `(figma_ref, nav_hint)` pairs from the prompt's `Figma refs` and `Nav hint` sections. There is one pair per member task.
+- List the `Member screens` from the prompt. Each carries a `nav_hint` and a `figma_files` block with three pre-fetched paths (`meta`, `ctx`, `screenshot`). One member screen per UI task.
 
 ### 2. Simulator Setup
 
@@ -47,7 +47,7 @@ Never tap home-screen icons. Capture the simulator UDID once and reuse it for ev
 
 ### 3. Per-Screen Loop
 
-For each `(figma_ref, nav_hint)` pair:
+For each member screen:
 
 #### 3a. Navigate
 
@@ -71,23 +71,27 @@ mcp__argent__screenshot              → rendered pixels (always)
 
 Save the structural tree to disk as `app.tree.json`. Note the screenshot path Argent auto-saved. If the structural tree is empty after one 500ms retry, emit `FAIL` for this screen and continue with the rest of the epic.
 
-#### 3c. Fetch the Figma Side
+#### 3c. Read the Pre-Fetched Figma Artifacts
 
-```
-mcp__figma__get_metadata        → XML tree of node ids, names, parent-relative frames
-mcp__figma__get_design_context  → React+Tailwind code with data-node-id back-references
-mcp__figma__get_screenshot      → rendered design (always)
-```
+The simulator-engineer does **not** call Figma MCP. The team-lead fetched the design side before dispatching and wrote three files per screen to a path it gave you under each member screen's `figma_files` field. The filename slug is the Figma node id with `:` replaced by `-` (e.g. node `1:1217` → file `1-1217.meta.xml`); the slug guarantees no collision between member screens within a gate and between re-runs of the same gate.
 
-Save metadata and design context to disk as `figma.meta.xml` and `figma.ctx.code`. The metadata is the structural backbone; the design context provides text content and style tokens.
+- `<node-slug>.meta.xml`  — `mcp__figma__get_metadata` response (structural backbone: node ids, names, parent-relative frames). Plain XML.
+- `<node-slug>.ctx.code`  — `mcp__figma__get_design_context` response (React+Tailwind with `data-node-id` back-references; source for visible text and style tokens). Plain text; trailing prose blocks are present in the raw response and are harmless — the projector only matches `data-node-id` elements.
+- `<node-slug>.figma.png` — the rendered design. The team-lead obtained this via `mcp__figma__get_screenshot` (which returned a short-lived URL) and then `curl`-ed the URL into the file. The PNG is the canonical visual reference for the judge.
+
+Read each file via the `Read` tool. The metadata is the structural backbone; the design context provides text content and style tokens; the screenshot is the visual ground truth the judge reads.
+
+If any of the three is missing or unreadable, emit `FAIL` for that screen with `"missing figma artifact at <path>"`. Do **not** attempt to call Figma MCP yourself — you don't have it. A missing file is a dispatch bug the team-lead must fix on the next attempt.
+
+**Why pre-fetched, not in-subagent:** Claude Code's MCP propagation does not reliably pass main-session MCP servers into subagent dispatches. The team-lead has Figma MCP; subagents do not. Pre-fetching once on the team-lead side sidesteps the propagation gap, makes the artifacts inspectable for the user, and avoids redundant fetches when the gate retries.
 
 #### 3d. Normalize Both Sides
 
-Run the projector to convert both raw payloads into the symmetric shape the judge consumes:
+Run the projector to convert both raw payloads into the symmetric shape the judge consumes. Pass the `figma_files` paths from the dispatch prompt directly:
 
 ```bash
-node <plugin>/scripts/fidelity/normalize.mjs argent  app.tree.json --viewport-pt <W>x<H>  > app.json
-node <plugin>/scripts/fidelity/normalize.mjs figma   figma.meta.xml figma.ctx.code        > figma.json
+node <plugin>/scripts/fidelity/normalize.mjs argent  app.tree.json --viewport-pt <W>x<H>          > app.json
+node <plugin>/scripts/fidelity/normalize.mjs figma   <figma_files.meta> <figma_files.ctx>        > figma.json
 ```
 
 `--viewport-pt` is the booted simulator's pt size; look it up via `list-simulators` runtime info or take it from the dispatch prompt. Without it the Argent describe path emits no frames.
@@ -211,6 +215,7 @@ The first screen matched; the second was unreachable. Overall verdict is `FAIL` 
 | "I'll do a quick login journey while I'm here." | Out of scope. Fidelity gates compare single screens, not flows. |
 | "The component tree was empty so I'll judge from the screenshot alone." | If the tree is empty after one retry, emit `FAIL` for that screen. Screenshot-only judgment loses node ids and the team-lead loses fix-routing anchors. |
 | "I'll skip running normalize.mjs and judge from the raw outputs directly." | The projector is the symmetric layer. Without it the judge sees a Figma React string on one side and an Argent JSON on the other, which produces inconsistent reasoning. Run the projector. |
+| "The Figma files I was given are stale or missing — I'll fetch them myself via Figma MCP." | You don't have `mcp__figma`. The team-lead pre-fetches Figma artifacts before dispatching you, on purpose, so the gate is robust to MCP propagation gaps. If a file is missing, emit `FAIL` for that screen — don't try to work around the dispatch contract. |
 | "The screen renders fine but the structure is slightly off — probably fine." | If the design specifies a structural element and the app does not render it, that's a `high`-severity identity delta regardless of how it looks at first glance. Materiality is the team-lead's call. |
 
 ## Red Flags
@@ -225,6 +230,7 @@ Stop and reconsider if you notice any of these — they are the moves this skill
 - About to emit a delta without a Figma node id — find the id or omit the delta.
 - About to flag a difference that is plainly real-data variation.
 - About to skip the projector step and judge raw payloads directly.
+- About to call `mcp__figma__*` from inside the gate — you don't have that tool; the team-lead pre-fetched the Figma artifacts and gave you paths. If a file is missing, `FAIL`, don't fall back.
 - About to mark a gate `MATCH` when one of its member screens failed navigation.
 - About to recurse into the next gate after the current one returns. The team-lead picks the next gate.
 - About to read all of `spec.md` or `plan.md` instead of the cited slices.
@@ -234,7 +240,8 @@ Stop and reconsider if you notice any of these — they are the moves this skill
 
 Before reporting `RESULT`:
 
-- [ ] Component tree, screenshot, Figma metadata, Figma design context, and Figma screenshot captured for every member screen — or `FAIL`-ed with a reason
+- [ ] App-side capture (component tree + screenshot) succeeded for every member screen — or `FAIL`-ed with a reason
+- [ ] Pre-fetched Figma artifacts (`meta.xml`, `ctx.code`, `figma.png`) were read from the dispatch-provided paths for every member screen; missing files emitted `FAIL` rather than triggering a workaround attempt
 - [ ] `normalize.mjs argent` and `normalize.mjs figma` ran successfully for every member screen
 - [ ] Every emitted delta carries a `[<tag>]` where tag is `high`/`medium`/`low`/`ambiguous`, a `<kind>`, a Figma `node_id`, a short label, and an evidence clause
 - [ ] Confidence tags reflect what the rule says: `high`/`medium`/`low` only when *confident* the difference is a real discrepancy (severity = magnitude only); `ambiguous` only when the judge truly cannot decide bug-vs-intent. No tag inflation, no tag deflation.

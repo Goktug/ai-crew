@@ -17,6 +17,7 @@ All eight architectural decisions are locked. Do not propose changes to any of: 
 | `team-lead` (main session) | **Opus** | Orchestrator + architect + planner + verifier + **reviewer** + shipper. Heavy thinking inline. |
 | `developer` subagent | **Sonnet** | One task per dispatch. **No `Agent`/`Task` tool.** |
 | `web-researcher` subagent | **Haiku** | One focused web-research question per dispatch. **No `Agent`/`Task` tool.** |
+| `simulator-engineer` subagent (RN only) | **Opus** | One fidelity gate per dispatch. Judgment-heavy: classifies confident vs ambiguous deltas, compares typography and color visually. **No `Agent`/`Task` tool.** |
 
 ## Architectural laws (non-negotiable)
 
@@ -63,7 +64,7 @@ ai-crew/
 │   ├── security-auditor.md                               # verbatim
 │   ├── developer.md                                      # NEW — Sonnet, NO Agent/Task tool
 │   ├── web-researcher.md                                 # NEW — Haiku, web tools only
-│   └── simulator-engineer.md                             # NEW — Sonnet, RN-only, Argent + Figma MCP, read-only
+│   └── simulator-engineer.md                             # NEW — Opus, RN-only, Argent MCP, read-only (Figma artifacts pre-fetched by team-lead)
 ├── references/                                           # all verbatim from agent-skills
 ├── hooks/
 │   ├── (verbatim from agent-skills)
