@@ -18,7 +18,6 @@ Before Phase 1, read `<plugin>/skills/using-agent-skills/SKILL.md` end to end. I
 - The **Skill Discovery** decision tree tells the team-lead which skill to load at each phase.
 - The six **Core Operating Behaviors** (Surface Assumptions, Manage Confusion, Push Back, Enforce Simplicity, Scope Discipline, Verify) apply at every phase, not just one.
 - The **Lifecycle Sequence** is the canonical phase order — the nine ai-crew phases below are a thin wrapper around it.
-- Phases below are the **base** lifecycle. Any addendum loaded per Skill Rule #5 amends specific phases — when its rule applies to a task, the addendum's instruction wins.
 
 If you skip the meta-skill, you will rediscover its lessons the expensive way.
 

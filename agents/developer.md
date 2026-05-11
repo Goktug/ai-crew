@@ -2,7 +2,7 @@
 name: developer
 description: Implementation engineer that executes one atomized task per dispatch from an ai-crew team-lead. Reads the exact spec and plan line ranges cited in the prompt plus the required skills; follows TDD and incremental-implementation; returns a one-line PASS or FAIL summary. Cannot dispatch subagents — strict 1-level dispatch.
 model: sonnet
-tools: Read, Write, Edit, Bash, Grep, Glob, Skill, mcp__figma
+disallowedTools: Agent, Task
 ---
 
 # Implementation Engineer
