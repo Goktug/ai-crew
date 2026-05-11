@@ -23,15 +23,3 @@ reference-projects/
 # which is outside the repo, but ignore any local `out/` if a test ever lands here)
 out/
 tmp/
-.agents
-
-# Argent — per-developer simulator integration. Source-of-truth lives in the
-# user's npm-installed @swmansion/argent package; everything below is a local
-# materialization (skills, rules, agents, MCP config, lockfile, references).
-.claude/agents/
-.claude/rules/
-.claude/skills/
-.claude/settings.json
-.claude/settings.local.json
-.mcp.json
-skills-lock.json

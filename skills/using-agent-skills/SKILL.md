@@ -25,8 +25,7 @@ Task arrives
     │   ├── Need better context? ─────→ context-engineering
     │   └── Need doc-verified code? ───→ source-driven-development
     ├── Writing/running tests? ────────→ test-driven-development
-    │   ├── Browser-based? ───────────→ browser-testing-with-devtools
-    │   └── iOS sim, app vs Figma? ──→ simulator-design-fidelity
+    │   └── Browser-based? ───────────→ browser-testing-with-devtools
     ├── Something broke? ──────────────→ debugging-and-error-recovery
     ├── Reviewing code? ───────────────→ code-review-and-quality
     │   ├── Security concerns? ───────→ security-and-hardening
@@ -131,15 +130,6 @@ These are the subtle errors that look like productivity but create problems:
 
 4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
 
-5. **Apply project-type addenda when matched.** At run start, after loading this meta-skill, check the `projectType` reported by the session-start hook (`detect-project-type.sh` in ai-crew). If a known project type maps to an addendum skill, **read the addendum end-to-end before starting Phase 1**. Addenda only **amend** the orchestrator's behavior for that project type — they never replace base skills, override architectural laws, or weaken locked invariants. Once the project type matches, the addendum is not optional.
-
-   Project-type addenda registered for ai-crew:
-
-   | Project type | Addendum skill | Amends |
-   |---|---|---|
-   | `react-native` | `react-native-fidelity-gates` | Team-lead Phases 4 (gate emission), 6 (simulator-engineer dispatch + advisory action policy), 7–8 (shared retry-budget extension) |
-   | any other type | none in v1 | — |
-
 ## Lifecycle Sequence
 
 For a complete feature, the typical skill sequence is:
@@ -174,7 +164,6 @@ Not every task needs every skill. A bug fix might only need: `debugging-and-erro
 | Build | api-and-interface-design | Stable interfaces with clear contracts |
 | Verify | test-driven-development | Failing test first, then make it pass |
 | Verify | browser-testing-with-devtools | Chrome DevTools MCP for runtime verification |
-| Verify | simulator-design-fidelity | iOS app vs. Figma structural diff via Argent MCP (RN runs only, dispatched by team-lead as a per-epic gate) |
 | Verify | debugging-and-error-recovery | Reproduce → localize → fix → guard |
 | Review | code-review-and-quality | Five-axis review with quality gates |
 | Review | security-and-hardening | OWASP prevention, input validation, least privilege |
@@ -183,4 +172,3 @@ Not every task needs every skill. A bug fix might only need: `debugging-and-erro
 | Ship | ci-cd-and-automation | Automated quality gates on every change |
 | Ship | documentation-and-adrs | Document the why, not just the what |
 | Ship | shipping-and-launch | Pre-launch checklist, monitoring, rollback plan |
-| Foundation (RN runs) | react-native-fidelity-gates | Project-type addendum: amends team-lead Phases 4 and 6 with simulator-engineer fidelity gates and the advisory action policy |
