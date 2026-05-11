@@ -4,7 +4,9 @@
 #
 # Asserts:
 #   - frontmatter has name=developer, model=sonnet
-#   - tools list = Read, Write, Edit, Bash, Grep, Glob, Skill (NO Agent, NO Task)
+#   - disallowedTools denylist includes Agent and Task (developer needs broad
+#     tool access; the denylist enforces the strict 1-level dispatch invariant
+#     without enumerating every allowed tool)
 #   - body explicitly forbids subagent dispatch
 #   - body references test-driven-development and incremental-implementation
 #   - body specifies one-line PASS/FAIL output format
@@ -27,7 +29,7 @@ if [ ! -f "$DEV" ]; then
 fi
 
 # Frontmatter checks (limited to first 10 lines so a body mention of "Agent"
-# does not produce a false positive on the tools: line).
+# does not produce a false positive on the disallowedTools: line).
 if head -10 "$DEV" | grep -q "^name: developer\$"; then
   echo "  [PASS] frontmatter name == developer"
 else
@@ -42,25 +44,29 @@ else
   failed=$((failed + 1))
 fi
 
-# Tools line: must include all 7 expected tools and exclude Agent/Task.
-tools_line="$(head -10 "$DEV" | grep '^tools:' || true)"
-if [ -z "$tools_line" ]; then
-  echo "  [FAIL] frontmatter has no tools: line"
+# disallowedTools line: must deny both Agent and Task (denylist pattern that
+# enforces strict 1-level dispatch without enumerating every allowed tool).
+# Also guard against a leftover `tools:` allowlist sneaking back in alongside
+# disallowedTools, which would silently override the denylist intent.
+disallowed_line="$(head -10 "$DEV" | grep '^disallowedTools:' || true)"
+if [ -z "$disallowed_line" ]; then
+  echo "  [FAIL] frontmatter has no disallowedTools: line"
   failed=$((failed + 1))
 else
-  for tool in Read Write Edit Bash Grep Glob Skill; do
-    if echo "$tools_line" | grep -qw "$tool"; then :; else
-      echo "  [FAIL] tools: line missing tool: $tool"
-      failed=$((failed + 1))
-    fi
-  done
   for forbidden in Agent Task; do
-    if echo "$tools_line" | grep -qw "$forbidden"; then
-      echo "  [FAIL] tools: line contains forbidden tool: $forbidden"
+    if echo "$disallowed_line" | grep -qw "$forbidden"; then :; else
+      echo "  [FAIL] disallowedTools: line missing required denial: $forbidden"
       failed=$((failed + 1))
     fi
   done
-  echo "  [PASS] tools: line has 7 allowed tools and no Agent/Task"
+  echo "  [PASS] disallowedTools: line denies Agent and Task"
+fi
+
+if head -10 "$DEV" | grep -q "^tools:"; then
+  echo "  [FAIL] frontmatter has stray tools: allowlist alongside disallowedTools:"
+  failed=$((failed + 1))
+else
+  echo "  [PASS] frontmatter has no stray tools: allowlist"
 fi
 
 # Body content checks.
