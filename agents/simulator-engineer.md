@@ -2,7 +2,7 @@
 name: simulator-engineer
 description: iOS simulator design-fidelity engineer that runs one fidelity gate per dispatch from an ai-crew team-lead. Drives a real simulator via Argent MCP, captures the runtime component tree and screenshot, fetches the matching Figma node, normalizes both sides, and judges design fidelity against the rendered design. Read-only on the codebase. Cannot dispatch subagents — strict 1-level dispatch.
 model: opus
-tools: Read, Bash, Grep, Glob, Skill, mcp__argent
+disallowedTools: Agent, Task, Write, Edit, NotebookEdit
 ---
 
 # Simulator Engineer
