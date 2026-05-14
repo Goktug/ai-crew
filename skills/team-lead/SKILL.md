@@ -52,7 +52,9 @@ Three files. That's it. No `intake.md`, no `research/` directory, no per-wave fi
 
 ### Phase 1 — Intake
 
-Read `<plugin>/skills/intake-with-validation/SKILL.md` inline. Run structured Q&A **one question at a time**, even when the request seems clear. Findings flow directly into `spec.md`. There is no separate intake artifact.
+Before any Q&A, read the project's own conventions: the root `CLAUDE.md` and every `.claude/rules/*.md`. These are authoritative — when a vendored SKILL.md default conflicts with a project rule (design system, preferred code-search tool, MCP server choice, test framework), the project rule wins, both in your own decisions and in every developer dispatch.
+
+Then read `<plugin>/skills/intake-with-validation/SKILL.md` inline. Run structured Q&A **one question at a time**, even when the request seems clear. Findings flow directly into `spec.md`. There is no separate intake artifact.
 
 ### Phase 2 — Research
 
@@ -107,7 +109,9 @@ Plan task:   ~/.claude/ai-crew/runs/2026-04-14-push-notif/plan.md  lines 145-178
              (read with: sed -n '145,178p' ~/.claude/ai-crew/runs/2026-04-14-push-notif/plan.md)
 Spec refs:   ~/.claude/ai-crew/runs/2026-04-14-push-notif/spec.md  lines 22-41, 67-78
 
-Skills to read first:
+Project rules: read repo CLAUDE.md and every .claude/rules/*.md before applying any skill default; defer to them on conflict.
+
+Skills to read first (project rules above override these on conflict):
   - <plugin>/skills/test-driven-development/SKILL.md
   - <plugin>/skills/incremental-implementation/SKILL.md
   - <plugin>/skills/mobile-component-testing-with-rntl/SKILL.md
