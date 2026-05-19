@@ -7,9 +7,9 @@ description: Orchestrates a full feature lifecycle from intake to PR with one hu
 
 ## Overview
 
-Orchestrate a full feature lifecycle inline, using reference-based dispatch to cheap subagents only where parallelism pays. The team-lead runs in the Opus main session and walks every task through nine phases. It does the heavy thinking — intake, spec, plan, verify, review, ship — by reading the relevant agent-skills SKILL.md files itself. It dispatches subagents only for two narrow jobs: `web-researcher` (Haiku) for one focused web question, and `developer` (Sonnet) for one atomized build task.
+Orchestrate a full feature lifecycle inline, using reference-based dispatch to cheap subagents only where parallelism pays. The team-lead runs in the Opus main session and walks every task through nine phases. It does the heavy thinking — intake, spec, plan, verify, review, ship — by reading the relevant agent-skills SKILL.md files itself. It dispatches subagents only for two narrow jobs: `web-researcher` (Haiku) for one focused web question, and a developer subagent (`sonnet-developer` or `opus-developer`) for one atomized build task — picked per task by the `complexity` flag in `plan.md`.
 
-Strict 1-level dispatch: subagents never spawn subagents. The `developer` and `web-researcher` agents have no `Agent` or `Task` tools by configuration.
+Strict 1-level dispatch: subagents never spawn subagents. The `sonnet-developer`, `opus-developer`, and `web-researcher` agents have no `Agent` or `Task` tools by configuration.
 
 ## Foundation: load `using-agent-skills` first
 
@@ -76,7 +76,9 @@ As the final step of Phase 3, generate the Section Index so Phase 6 dispatches c
 
 ### Phase 4 — Plan
 
-Read `<plugin>/skills/planning-and-task-breakdown/SKILL.md` inline. Write `plan.md` as a task DAG. Per task: ID, dependencies, file paths to touch, acceptance criteria, skill tags, verification command, **independence flag** (for parallelism), and **spec refs** (the spec-section line ranges this task depends on, taken from the Section Index). Plan quality is the multiplier — atomize aggressively so the developer can execute one task at a time without judgment calls.
+Read `<plugin>/skills/planning-and-task-breakdown/SKILL.md` inline. Write `plan.md` as a task DAG. Per task: ID, dependencies, file paths to touch, acceptance criteria, skill tags, verification command, **independence flag** (for parallelism), **complexity flag** (`simple` or `complex` — routes the task to `sonnet-developer` or `opus-developer` at dispatch time), and **spec refs** (the spec-section line ranges this task depends on, taken from the Section Index). Plan quality is the multiplier — atomize aggressively so the developer can execute one task at a time without judgment calls.
+
+Mark a task `complex` only when one applies: ambiguous acceptance criteria, multi-file coordination, non-trivial algorithm or refactor, subtle concurrency/state, or cross-cutting type changes. Default to `simple`. Re-atomize before escalating — a task that "needs Opus" is usually a sign the task isn't atomized enough.
 
 As the final step of Phase 4 (before presenting the plan for checkpoint), generate the Task Index so each Phase 6 dispatch can cite its task's line range:
 
@@ -92,15 +94,15 @@ Stop. Present `plan.md` to the user. Wait for explicit approval before any file 
 
 ### Phase 6 — Build
 
-Walk the DAG in dependency order. For each task — sequential by default, parallel within a wave when the plan declares independence — dispatch a `developer` subagent with a **reference-based prompt** under ~30 lines.
+Walk the DAG in dependency order. For each task — sequential by default, parallel within a wave when the plan declares independence — dispatch a developer subagent with a **reference-based prompt** under ~30 lines. Route by the task's `complexity` flag: `simple` → `sonnet-developer`, `complex` → `opus-developer`. The two agents have identical workflows and contracts; only the backing model differs.
 
-The developer uses Sonnet and has only `Read, Write, Edit, Bash, Grep, Glob, Skill, mcp__figma` tools. It cannot dispatch further subagents. It reads the spec, plan, and required skills itself. It follows TDD (write failing test → implement → green) and incremental-implementation. It returns ONLY a one-line `PASS: …` or `FAIL: …` summary.
+Both developers have only `Read, Write, Edit, Bash, Grep, Glob, Skill, mcp__figma` tools and cannot dispatch further subagents. They read the spec, plan, and required skills themselves. They follow TDD (write failing test → implement → green) and incremental-implementation. They return ONLY a one-line `PASS: …` or `FAIL: …` summary.
 
-After each developer dispatch, the team-lead checks the box for that task in `progress.md` (PASS) or marks it failed (FAIL).
+After each developer dispatch, the team-lead checks the box for that task in `progress.md` (PASS) or marks it failed (FAIL). Record which developer (`sonnet-developer` or `opus-developer`) handled it.
 
 #### Reference-based dispatch template
 
-The team-lead's outgoing prompt to a `developer` is ≤30 lines and cites line ranges pulled from the Task Index and Section Index — never embeds spec/plan content, never points at whole files. Every dispatch MUST include a `Plan task` range and at least one `Spec refs` range.
+The team-lead's outgoing prompt to either developer is ≤30 lines and cites line ranges pulled from the Task Index and Section Index — never embeds spec/plan content, never points at whole files. Every dispatch MUST include a `Plan task` range and at least one `Spec refs` range.
 
 ```
 Task: T-007 — Add push notification permission flow
@@ -134,7 +136,7 @@ The subagent reads only those slices. Team-lead context stays small even on long
 
 ### Phase 7 — Verify
 
-The team-lead runs typecheck + lint + the project's test runner (RNTL for React Native) inline. On failure, dispatch ONE focused-fix `developer` task with a reference-based prompt that names the failing files and the verification command.
+The team-lead runs typecheck + lint + the project's test runner (RNTL for React Native) inline. On failure, dispatch ONE focused-fix developer task with a reference-based prompt that names the failing files and the verification command. Route the fix using the original task's `complexity` flag; bump to `opus-developer` only if the same task has already failed under `sonnet-developer` within the retry budget.
 
 **Retry budget:** **max 3 fix loops** before escalating to the user. The same budget covers Verify and Review combined.
 
@@ -178,7 +180,8 @@ The team-lead reads these vendored SKILL.md files inline at each phase. `using-a
 | "I can skip intake — the request is clear." | Intake is one-question-at-a-time even when the request seems clear. The most expensive bugs come from assumptions you didn't surface. |
 | "Let me embed the plan content — or just point at the whole `plan.md` — in the developer prompt." | No. Cite the exact task line range from the Task Index. Embedding blows up team-lead context on long runs; whole-file pointers waste subagent tokens and force it to re-discover structure the Task Index already encodes. |
 | "I'll spawn a reviewer subagent to do the review in parallel." | Not in this plugin. Review is inline by the Opus team-lead across four skills. Locked design decision. |
-| "I'll let the developer subagent dispatch its own helper subagents." | Strict 1-level dispatch. The `developer` and `web-researcher` agents do not have `Agent` or `Task` tools by configuration. |
+| "I'll let the developer subagent dispatch its own helper subagents." | Strict 1-level dispatch. The `sonnet-developer`, `opus-developer`, and `web-researcher` agents do not have `Agent` or `Task` tools by configuration. |
+| "This task is borderline — I'll just send it to `opus-developer` to be safe." | Default to `sonnet-developer`. Mark `complex` only when the criteria in Phase 4 actually apply. Defaulting to Opus burns budget and hides under-atomized tasks. |
 | "This fix loop is the 4th retry — one more attempt should do it." | No. Max 3 fix loops total (Verify + Review combined). Escalate to the user. |
 | "I'll keep iterating on the plan without showing it to the user." | No. The plan checkpoint is the only mandatory human touchpoint. Show the plan, wait for approval, then move. |
 
@@ -188,6 +191,7 @@ Stop and reconsider if you notice any of these:
 
 - About to dispatch a developer with > 50 lines of embedded context.
 - About to dispatch a developer without a `Plan task` line range and at least one `Spec refs` line range.
+- About to dispatch a task whose `complexity` flag in `plan.md` doesn't match the agent you're routing to.
 - About to edit `spec.md` after Phase 3 or `plan.md` after Phase 5 — both files are frozen after their phase, full stop.
 - About to skip the plan checkpoint because "the user clearly wants me to just run it."
 - About to enter a 4th fix-loop retry on the same task.
@@ -212,5 +216,6 @@ Before declaring a run complete:
 - [ ] No subagent dispatched another subagent
 - [ ] No subagent prompt exceeded ~30 lines
 - [ ] Every developer dispatch cited `Plan task` + `Spec refs` line ranges from the Task Index / Section Index — no whole-file pointers
+- [ ] Every plan task carries a `complexity` flag, and every dispatch routed to `sonnet-developer` or `opus-developer` matched that flag
 - [ ] No reviewer subagent was used
 - [ ] No vendored SKILL.md was edited
