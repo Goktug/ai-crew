@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 #
-# test-developer-agent.sh — verify the developer subagent definition.
+# test-developer-agent.sh — verify both developer subagent definitions.
 #
-# Asserts:
-#   - frontmatter has name=developer, model=sonnet
+# The plugin ships two developer agents that share an identical workflow and
+# differ only in the backing model. The team-lead routes tasks to one or the
+# other based on the `complexity` flag in plan.md (simple → sonnet, complex →
+# opus). Both must pass the same contract checks.
+#
+# Asserts (for each of sonnet-developer.md and opus-developer.md):
+#   - frontmatter has the matching name and expected model
 #   - disallowedTools denylist includes Agent and Task (developer needs broad
 #     tool access; the denylist enforces the strict 1-level dispatch invariant
 #     without enumerating every allowed tool)
+#   - no stray tools: allowlist alongside disallowedTools:
 #   - body explicitly forbids subagent dispatch
 #   - body references test-driven-development and incremental-implementation
 #   - body specifies one-line PASS/FAIL output format
@@ -18,84 +24,116 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 cd "$PLUGIN_ROOT"
 
-echo "=== Test: developer agent ==="
+echo "=== Test: developer agents (sonnet + opus) ==="
 
-DEV="agents/developer.md"
 failed=0
 
-if [ ! -f "$DEV" ]; then
-  echo "  [FAIL] missing $DEV"
-  exit 1
-fi
+check_agent() {
+  local name="$1"
+  local expected_model="$2"
+  local path="agents/${name}.md"
 
-# Frontmatter checks (limited to first 10 lines so a body mention of "Agent"
-# does not produce a false positive on the disallowedTools: line).
-if head -10 "$DEV" | grep -q "^name: developer\$"; then
-  echo "  [PASS] frontmatter name == developer"
-else
-  echo "  [FAIL] frontmatter name is not developer"
-  failed=$((failed + 1))
-fi
+  echo ""
+  echo "--- ${name} (${path}) ---"
 
-if head -10 "$DEV" | grep -q "^model: sonnet\$"; then
-  echo "  [PASS] frontmatter model == sonnet"
-else
-  echo "  [FAIL] frontmatter model is not sonnet"
-  failed=$((failed + 1))
-fi
+  if [ ! -f "$path" ]; then
+    echo "  [FAIL] missing $path"
+    failed=$((failed + 1))
+    return
+  fi
 
-# disallowedTools line: must deny both Agent and Task (denylist pattern that
-# enforces strict 1-level dispatch without enumerating every allowed tool).
-# Also guard against a leftover `tools:` allowlist sneaking back in alongside
-# disallowedTools, which would silently override the denylist intent.
-disallowed_line="$(head -10 "$DEV" | grep '^disallowedTools:' || true)"
-if [ -z "$disallowed_line" ]; then
-  echo "  [FAIL] frontmatter has no disallowedTools: line"
-  failed=$((failed + 1))
-else
-  for forbidden in Agent Task; do
-    if echo "$disallowed_line" | grep -qw "$forbidden"; then :; else
-      echo "  [FAIL] disallowedTools: line missing required denial: $forbidden"
-      failed=$((failed + 1))
+  if head -10 "$path" | grep -q "^name: ${name}\$"; then
+    echo "  [PASS] frontmatter name == ${name}"
+  else
+    echo "  [FAIL] frontmatter name is not ${name}"
+    failed=$((failed + 1))
+  fi
+
+  if head -10 "$path" | grep -q "^model: ${expected_model}\$"; then
+    echo "  [PASS] frontmatter model == ${expected_model}"
+  else
+    echo "  [FAIL] frontmatter model is not ${expected_model}"
+    failed=$((failed + 1))
+  fi
+
+  local disallowed_line
+  disallowed_line="$(head -10 "$path" | grep '^disallowedTools:' || true)"
+  if [ -z "$disallowed_line" ]; then
+    echo "  [FAIL] frontmatter has no disallowedTools: line"
+    failed=$((failed + 1))
+  else
+    local denylist_ok=true
+    for forbidden in Agent Task; do
+      if echo "$disallowed_line" | grep -qw "$forbidden"; then :; else
+        echo "  [FAIL] disallowedTools: line missing required denial: $forbidden"
+        failed=$((failed + 1))
+        denylist_ok=false
+      fi
+    done
+    if [ "$denylist_ok" = true ]; then
+      echo "  [PASS] disallowedTools: line denies Agent and Task"
     fi
-  done
-  echo "  [PASS] disallowedTools: line denies Agent and Task"
-fi
+  fi
 
-if head -10 "$DEV" | grep -q "^tools:"; then
-  echo "  [FAIL] frontmatter has stray tools: allowlist alongside disallowedTools:"
+  if head -10 "$path" | grep -q "^tools:"; then
+    echo "  [FAIL] frontmatter has stray tools: allowlist alongside disallowedTools:"
+    failed=$((failed + 1))
+  else
+    echo "  [PASS] frontmatter has no stray tools: allowlist"
+  fi
+
+  if grep -qi "do not have access to Agent\|cannot dispatch subagents\|no Agent or Task" "$path"; then
+    echo "  [PASS] body forbids subagent dispatch explicitly"
+  else
+    echo "  [FAIL] body does not explicitly forbid subagent dispatch"
+    failed=$((failed + 1))
+  fi
+
+  if grep -q "test-driven-development" "$path"; then
+    echo "  [PASS] body references test-driven-development"
+  else
+    echo "  [FAIL] body does not reference test-driven-development"
+    failed=$((failed + 1))
+  fi
+
+  if grep -q "incremental-implementation" "$path"; then
+    echo "  [PASS] body references incremental-implementation"
+  else
+    echo "  [FAIL] body does not reference incremental-implementation"
+    failed=$((failed + 1))
+  fi
+
+  if grep -q "PASS:" "$path" && grep -q "FAIL:" "$path"; then
+    echo "  [PASS] body specifies PASS/FAIL one-line output format"
+  else
+    echo "  [FAIL] body does not specify PASS/FAIL output format"
+    failed=$((failed + 1))
+  fi
+}
+
+check_agent sonnet-developer sonnet
+check_agent opus-developer opus
+
+# The team-lead skill must reference both agents and the complexity flag that
+# routes between them. A regression here would break the dispatch contract.
+echo ""
+echo "--- team-lead skill routing references ---"
+SKILL="skills/team-lead/SKILL.md"
+for needle in "sonnet-developer" "opus-developer" "complexity"; do
+  if grep -q "$needle" "$SKILL"; then
+    echo "  [PASS] $SKILL references '$needle'"
+  else
+    echo "  [FAIL] $SKILL is missing reference to '$needle'"
+    failed=$((failed + 1))
+  fi
+done
+
+# The old single agent must be gone — leaving it would create ambiguous routing.
+if [ -e "agents/developer.md" ]; then
+  echo "  [FAIL] legacy agents/developer.md still exists; it should be removed"
   failed=$((failed + 1))
 else
-  echo "  [PASS] frontmatter has no stray tools: allowlist"
-fi
-
-# Body content checks.
-if grep -qi "do not have access to Agent\|cannot dispatch subagents\|no Agent or Task" "$DEV"; then
-  echo "  [PASS] body forbids subagent dispatch explicitly"
-else
-  echo "  [FAIL] body does not explicitly forbid subagent dispatch"
-  failed=$((failed + 1))
-fi
-
-if grep -q "test-driven-development" "$DEV"; then
-  echo "  [PASS] body references test-driven-development"
-else
-  echo "  [FAIL] body does not reference test-driven-development"
-  failed=$((failed + 1))
-fi
-
-if grep -q "incremental-implementation" "$DEV"; then
-  echo "  [PASS] body references incremental-implementation"
-else
-  echo "  [FAIL] body does not reference incremental-implementation"
-  failed=$((failed + 1))
-fi
-
-if grep -q "PASS:" "$DEV" && grep -q "FAIL:" "$DEV"; then
-  echo "  [PASS] body specifies PASS/FAIL one-line output format"
-else
-  echo "  [FAIL] body does not specify PASS/FAIL output format"
-  failed=$((failed + 1))
+  echo "  [PASS] legacy agents/developer.md is removed"
 fi
 
 if [ "$failed" -gt 0 ]; then
@@ -105,5 +143,5 @@ if [ "$failed" -gt 0 ]; then
 fi
 
 echo ""
-echo "PASS: developer agent verified"
+echo "PASS: sonnet-developer and opus-developer verified"
 exit 0
