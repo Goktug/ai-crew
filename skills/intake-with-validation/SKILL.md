@@ -41,14 +41,36 @@ The `— missing:` tail tells the user exactly what intake needs to surface and 
 
 ### Step 2 — Ask one question at a time, each with a GUESS attached
 
-Format:
+Wait for the user to react before asking the next question. **Never batch.**
+
+**Delivery — bounded questions use the `AskUserQuestion` tool, not plain text.**
+
+When the answer space is bounded (2–4 discrete options), invoke the `AskUserQuestion` tool so the user gets the interactive, arrow-key-navigable widget. Fold your `GUESS` into the **first option**, labeled `(Recommended)`, with the reasoning in its `description`:
+
+```
+AskUserQuestion({
+  questions: [{
+    question: "<one focused question>",
+    header:   "<≤12-char tag>",
+    multiSelect: false,
+    options: [
+      { label: "B. <recommended choice> (Recommended)",
+        description: "<your GUESS — the reasoning that makes this your hypothesis>" },
+      { label: "A. <alternative>",
+        description: "<trade-off vs. recommended, quantified where possible>" },
+      { label: "C. <alternative>",
+        description: "<trade-off vs. recommended>" }
+    ]
+  }]
+})
+```
+
+When the answer space is genuinely unbounded (e.g. "what's the observable success criterion?"), `AskUserQuestion` doesn't fit — fall back to plain text:
 
 ```
 Q:     <one focused question>
 GUESS: <your hypothesis for the answer, with the reasoning that produced it>
 ```
-
-Wait for the user to react before asking the next question. **Never batch.**
 
 **Why one at a time:**
 - The user can't react to your hypotheses if you bury them in a list.
@@ -70,7 +92,7 @@ The risk is a polite user agreeing with your guess to be agreeable. Mitigate by 
 3. Non-trivial decisions → present 2–3 options with trade-offs, quantified when possible.
 4. Lead with your recommended option and explain why.
 
-The `GUESS:` line and the recommended option are compatible — the GUESS *is* your recommended option for open-ended questions; for multiple-choice questions, lead with the recommended option and put your reasoning in the GUESS.
+For bounded questions, the four rules are satisfied by the `AskUserQuestion` invocation above: one question, multiple choice, trade-offs in each option's `description`, recommendation listed first.
 
 ### Step 3 — Cover the four required areas
 
@@ -197,6 +219,8 @@ User: it's our cron — we just never bothered to jitter it.
 
 Two rounds in, the agent has discovered the actual ask isn't "add caching." It's "jitter the cron." Different artifact, different scope, different work. Adding a cache without fixing the cron would have left the 429s in place at a higher infra cost.
 
+(The two questions above are bounded — in a real run they would be delivered via the `AskUserQuestion` tool with the GUESS folded into the `(Recommended)` option's description. Plain-text form is shown here for readability.)
+
 ## Common Rationalizations
 
 | Rationalization | Reality |
@@ -214,6 +238,7 @@ Two rounds in, the agent has discovered the actual ask isn't "add caching." It's
 ## Red Flags
 
 - More than one question in a single message.
+- A bounded question (2–4 discrete options) delivered as plain text instead of via the `AskUserQuestion` tool — the user loses the interactive widget.
 - A question without a GUESS attached — that's surveying, not committing.
 - A confidence number below ~70% with no reason attached on the same line.
 - Three or more rounds without confidence visibly rising — you're asking the wrong questions; step back and reframe.
@@ -230,7 +255,7 @@ Before advancing to Phase 2 (Research) or Phase 3 (Spec):
 
 - [ ] An explicit hypothesis with a confidence number was stated in the first turn.
 - [ ] Every confidence number below ~70% was accompanied by a one-line reason.
-- [ ] Every question carried a GUESS in the `Q: / GUESS:` format.
+- [ ] Every bounded question was delivered via the `AskUserQuestion` tool (with the GUESS folded into the `(Recommended)` option's `description`); every open-ended question used the plain-text `Q: / GUESS:` format.
 - [ ] At least one "what would you actually want if you didn't have to justify it?" probe ran when the user gave a sophistication-signaling or convention-signaling answer (when applicable).
 - [ ] At the stop point, the team-lead could predict reactions to the next three questions it would ask.
 - [ ] A concrete restate (Outcome / User / Why now / Success / Constraint / Out of scope) was written back to the user.
