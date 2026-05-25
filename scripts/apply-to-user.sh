@@ -61,13 +61,39 @@ active_install_path() {
 ACTIVE_PATH="$(active_install_path || true)"
 if [ -n "$ACTIVE_PATH" ]; then
   ACTIVE_VERSION="$(basename "$ACTIVE_PATH")"
-  CACHE_TARGET="$ACTIVE_PATH"
 else
   ACTIVE_VERSION=""
-  CACHE_TARGET="$CACHE_DIR/$DEV_VERSION"
 fi
 
-TARGETS=("$CACHE_TARGET" "$MARKETPLACE_CLONE")
+# Collect every version-shaped cache directory (semver-looking names only —
+# skips .bak.* and other junk). Claude Code can auto-create a new cache dir
+# matching plugin.json's version on /reload-plugins, so we sync them all.
+TARGETS=()
+if [ -d "$CACHE_DIR" ]; then
+  while IFS= read -r d; do
+    [ -n "$d" ] && TARGETS+=("$d")
+  done < <(find "$CACHE_DIR" -mindepth 1 -maxdepth 1 -type d \
+             -regex '.*/[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null | sort)
+fi
+
+# Helper: does the TARGETS array already contain the given path?
+# Safe when TARGETS is empty under `set -u`.
+targets_contains() {
+  local needle="$1"
+  [ ${#TARGETS[@]} -eq 0 ] && return 1
+  printf '%s\n' "${TARGETS[@]}" | grep -qFx "$needle"
+}
+
+# Always include the dev version path, even if it doesn't exist yet.
+DEV_VERSION_PATH="$CACHE_DIR/$DEV_VERSION"
+targets_contains "$DEV_VERSION_PATH" || TARGETS+=("$DEV_VERSION_PATH")
+
+# Include the active path if registered (defensive — usually already in the list).
+if [ -n "$ACTIVE_PATH" ]; then
+  targets_contains "$ACTIVE_PATH" || TARGETS+=("$ACTIVE_PATH")
+fi
+
+TARGETS+=("$MARKETPLACE_CLONE")
 
 RSYNC_EXCLUDES=(
   --exclude='.git/'
@@ -126,25 +152,34 @@ status() {
 apply_one() {
   local target="$1"
   mkdir -p "$(dirname "$target")"
+  local action="created"
 
   if [ -L "$target" ]; then
     echo "Removing existing symlink: $target"
     rm "$target"
+    mkdir -p "$target"
   elif [ -d "$target" ]; then
     if [ -f "$target/.applied-from-dev" ]; then
-      echo "Clearing previous dev-copy at: $target"
-      rm -rf "$target"
+      action="refreshed (preserved .in_use/)"
     else
       backup="$target.bak.$(date +%Y%m%d-%H%M%S)"
       echo "Backing up untouched install: $target → $backup"
       mv "$target" "$backup"
+      mkdir -p "$target"
     fi
+  else
+    mkdir -p "$target"
   fi
 
-  mkdir -p "$target"
-  rsync -a "${RSYNC_EXCLUDES[@]}" "$REPO_ROOT/" "$target/"
+  # --delete keeps the target a clean mirror of the dev repo; --exclude='.in_use/'
+  # preserves Claude Code's session lockfiles when refreshing an active install.
+  rsync -a --delete \
+    --exclude='.in_use/' \
+    --exclude='.applied-from-dev' \
+    "${RSYNC_EXCLUDES[@]}" \
+    "$REPO_ROOT/" "$target/"
   date -u +%Y-%m-%dT%H:%M:%SZ > "$target/.applied-from-dev"
-  echo "Copied dev repo → $target"
+  echo "Synced dev repo → $target  ($action)"
 }
 
 apply() {
