@@ -14,8 +14,8 @@ All eight architectural decisions are locked. Do not propose changes to any of: 
 
 | Layer | Model | Role |
 |---|---|---|
-| `team-lead` (main session) | **Opus** | Orchestrator + architect + planner + verifier + **reviewer** + shipper. Heavy thinking inline. |
-| `developer` subagent | **Sonnet** | One task per dispatch. **No `Agent`/`Task` tool.** |
+| `team-lead` (main session) | **Fable 5** | Coordinator — plans big, executes small. Orchestrator + architect + planner + verifier + **reviewer** + shipper. Heavy thinking inline; never reads token-heavy raw material a dispatch can read. |
+| `sonnet-developer` / `opus-developer` / `fable-developer` subagents | **Sonnet / Opus / Fable 5** | One task per dispatch, routed by the plan's `complexity` flag (`simple` / `complex` / `frontier`). `fable-developer` is rare by design — no rate arbitrage, only context isolation and depth. **No `Agent`/`Task` tool.** |
 | `web-researcher` subagent | **Haiku** | One focused web-research question per dispatch. **No `Agent`/`Task` tool.** |
 
 ## Architectural laws (non-negotiable)
@@ -26,7 +26,7 @@ All eight architectural decisions are locked. Do not propose changes to any of: 
 4. **Run state at** `~/.claude/ai-crew/runs/<YYYY-MM-DD-slug>/`.
 5. **Vendored agent-skills SKILL.md content is never edited.** One-time copy, no upstream sync.
 6. **Plan quality > parallelism.** Atomized DAG with per-task acceptance criteria + verification commands. Sonnet executes mechanically when the plan is right.
-7. **No reviewer subagents.** Opus team-lead does five-axis review inline using agent-skills' four review skills (`code-review-and-quality`, `security-and-hardening`, `code-simplification`, `performance-optimization`).
+7. **No reviewer subagents.** Fable team-lead does five-axis review inline using agent-skills' four review skills (`code-review-and-quality`, `security-and-hardening`, `code-simplification`, `performance-optimization`).
 8. **Verify/review retry policy: max 3 fix loops** before escalating to user.
 
 ## v1 scope (what we are NOT doing)

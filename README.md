@@ -4,7 +4,7 @@
 
 **Describe the job. Approve the plan. Get the PR.**
 
-ai-crew encodes the workflows, quality gates, and best practices senior engineers run on every change — intake, spec, plan, build, verify, review, ship — and packages them as a Claude Code orchestrator for TypeScript, Node, backend, and React Native. An Opus team-lead reasons through every phase; scoped Sonnet developers handle implementation in sequence or in parallel; one human checkpoint sits between Plan and Build.
+ai-crew encodes the workflows, quality gates, and best practices senior engineers run on every change — intake, spec, plan, build, verify, review, ship — and packages them as a Claude Code orchestrator for TypeScript, Node, backend, and React Native. A Fable 5 team-lead reasons through every phase; scoped Sonnet and Opus developers handle implementation in sequence or in parallel; one human checkpoint sits between Plan and Build.
 
 Built on top of [Addy Osmani's `agent-skills`](https://github.com/addyosmani/agent-skills) (vendored, MIT). See [§ Why this is different](#why-this-is-different) for what ai-crew adds on top.
 
@@ -75,7 +75,7 @@ ai-crew  [Wave 1 — dispatching 3 parallel Sonnet developers...]
 - A written `spec.md` and `plan.md` before any code is touched — edit them if you want.
 - One clear checkpoint: you approve the plan, then ai-crew runs without interruption.
 - Tasks that can run in parallel are dispatched as concurrent Sonnet developers — no serial bottleneck on independent work.
-- A five-axis review (correctness, readability, architecture, security, performance) done inline by the Opus team-lead before the PR opens.
+- A five-axis review (correctness, readability, architecture, security, performance) done inline by the Fable 5 team-lead before the PR opens.
 - Max 3 fix loops on failures before the problem escalates back to you, never silently broken.
 
 ---
@@ -244,14 +244,14 @@ ai-crew is general-purpose. React Native is one use case, not the only one.
 Intake ─► Research ─► Spec ─► Plan ─► ✋ CHECKPOINT ─► Build ─► Verify ─► Review ─► Ship
 ```
 
-Each phase has a defined skill and a defined output. The Opus team-lead runs every phase inline — it dispatches subagents only for Build tasks and web research questions.
+Each phase has a defined skill and a defined output. The Fable 5 team-lead runs every phase inline — it dispatches subagents only for Build tasks and web research questions.
 
 ### Model routing
 
 | Layer | Model | Role |
 |---|---|---|
-| `team-lead` (main session) | **Opus** | Orchestrator + architect + planner + verifier + reviewer + shipper. Heavy thinking inline. |
-| `developer` subagent | **Sonnet** | One task per dispatch. No `Agent`/`Task` tool. |
+| `team-lead` (main session) | **Fable 5** | Coordinator — plans big, executes small. Orchestrator + architect + planner + verifier + reviewer + shipper. Heavy thinking inline; never reads token-heavy raw material a dispatch can read. |
+| `sonnet-developer` / `opus-developer` / `fable-developer` subagents | **Sonnet / Opus / Fable 5** | One task per dispatch, routed by the plan's `complexity` flag (`simple` / `complex` / `frontier`). `fable-developer` is rare by design — no rate arbitrage, only context isolation and depth. No `Agent`/`Task` tool. |
 | `web-researcher` subagent | **Haiku** | One focused web-research question per dispatch. No `Agent`/`Task` tool. |
 
 ### Reference-based dispatch
@@ -297,7 +297,7 @@ The one-question-at-a-time intake pattern was popularized by the Superpowers pro
 | Full lifecycle orchestrator (Intake → PR) | No | Partial | Yes — 9 phases |
 | Written plan with human checkpoint | No | No | Yes — mandatory |
 | Parallel agent dispatch within a run | No | No | Yes — independent tasks fan out |
-| Inline five-axis review by orchestrator | No | No | Yes — Opus, 4 review skills |
+| Inline five-axis review by orchestrator | No | No | Yes — Fable 5, 4 review skills |
 | Max fix-loop budget before escalation | No | No | Yes — 3 loops |
 | Reference-based dispatch (line-range slicing) | No | No | Yes — md-index.sh |
 | Subagent spawning subagents | N/A | Varies | Never — strict 1-level |
@@ -313,7 +313,7 @@ Guarantees pulled directly from the locked architectural laws:
 - **Three-file run state.** Each run writes exactly `spec.md`, `plan.md`, `progress.md` under `~/.claude/ai-crew/runs/<YYYY-MM-DD-slug>/`. Nothing else unless the run materially needs it.
 - **One mandatory human checkpoint.** Plan approval is the only point where ai-crew stops and waits. Everything before and after is autonomous.
 - **Max 3 fix loops before escalation.** Verify and Review share a combined budget of 3 fix-loop retries. On the 4th failure, ai-crew escalates to you instead of silently spinning.
-- **Inline review by the Opus team-lead.** Review is done inline across 4 review skills (`code-review-and-quality`, `security-and-hardening`, `code-simplification`, `performance-optimization`). There are no reviewer subagents.
+- **Inline review by the Fable 5 team-lead.** Review is done inline across 4 review skills (`code-review-and-quality`, `security-and-hardening`, `code-simplification`, `performance-optimization`). There are no reviewer subagents.
 - **Vendored skills are never edited.** The 21 agent-skills are a one-time copy. Editing them would silently diverge from upstream.
 
 ---
@@ -372,7 +372,7 @@ Both. The intake phase asks about existing patterns, conventions, and constraint
 <details>
 <summary><b>What models does ai-crew use and can I change them?</b></summary>
 
-The orchestrator (team-lead) runs on Opus for heavy reasoning — spec writing, plan quality, inline review. Developer subagents run on Sonnet: one atomized task per dispatch, no spawning of further agents. Web-researcher subagents run on Haiku: one focused question each. The model routing is a locked architectural decision because the cost-to-capability fit at each layer is deliberate.
+The orchestrator (team-lead) runs on Fable 5 as a plan-big-execute-small coordinator — it does the heavy reasoning (spec writing, plan quality, inline review) and never reads token-heavy raw material a worker can read, so the heavy tokens bill at worker rates. Developer subagents run on Sonnet (simple tasks), Opus (complex tasks), or Fable 5 (rare frontier tasks that resist atomization): one atomized task per dispatch, no spawning of further agents. Web-researcher subagents run on Haiku: one focused question each. The model routing is a locked architectural decision because the cost-to-capability fit at each layer is deliberate.
 
 </details>
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# test-developer-agent.sh — verify both developer subagent definitions.
+# test-developer-agent.sh — verify all developer subagent definitions.
 #
-# The plugin ships two developer agents that share an identical workflow and
-# differ only in the backing model. The team-lead routes tasks to one or the
-# other based on the `complexity` flag in plan.md (simple → sonnet, complex →
-# opus). Both must pass the same contract checks.
+# The plugin ships three developer agents that share an identical workflow and
+# differ only in the backing model. The team-lead routes tasks by the
+# `complexity` flag in plan.md (simple → sonnet, complex → opus, frontier →
+# fable). All must pass the same contract checks.
 #
-# Asserts (for each of sonnet-developer.md and opus-developer.md):
+# Asserts (for each of sonnet-developer.md, opus-developer.md, and fable-developer.md):
 #   - frontmatter has the matching name and expected model
 #   - disallowedTools denylist includes Agent and Task (developer needs broad
 #     tool access; the denylist enforces the strict 1-level dispatch invariant
@@ -24,7 +24,7 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 cd "$PLUGIN_ROOT"
 
-echo "=== Test: developer agents (sonnet + opus) ==="
+echo "=== Test: developer agents (sonnet + opus + fable) ==="
 
 failed=0
 
@@ -113,13 +113,14 @@ check_agent() {
 
 check_agent sonnet-developer sonnet
 check_agent opus-developer opus
+check_agent fable-developer fable
 
-# The team-lead skill must reference both agents and the complexity flag that
+# The team-lead skill must reference all agents and the complexity flag that
 # routes between them. A regression here would break the dispatch contract.
 echo ""
 echo "--- team-lead skill routing references ---"
 SKILL="skills/team-lead/SKILL.md"
-for needle in "sonnet-developer" "opus-developer" "complexity"; do
+for needle in "sonnet-developer" "opus-developer" "fable-developer" "complexity"; do
   if grep -q "$needle" "$SKILL"; then
     echo "  [PASS] $SKILL references '$needle'"
   else
@@ -143,5 +144,5 @@ if [ "$failed" -gt 0 ]; then
 fi
 
 echo ""
-echo "PASS: sonnet-developer and opus-developer verified"
+echo "PASS: sonnet-developer, opus-developer, and fable-developer verified"
 exit 0

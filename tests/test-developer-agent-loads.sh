@@ -5,11 +5,11 @@
 # schema regressions that file-content greps would miss (e.g., wrong
 # frontmatter format that claude rejects but grep accepts).
 #
-# Runs the same probe against both sonnet-developer and opus-developer,
-# asserting each reports the expected model plus the same tool surface
-# and PASS/FAIL output contract.
+# Runs the same probe against sonnet-developer, opus-developer, and
+# fable-developer, asserting each reports the expected model plus the same
+# tool surface and PASS/FAIL output contract.
 #
-# COSTS API CREDITS (two claude invocations).
+# COSTS API CREDITS (three claude invocations).
 
 set -euo pipefail
 
@@ -88,11 +88,12 @@ probe_agent() {
 
 probe_agent sonnet-developer sonnet
 probe_agent opus-developer opus
+probe_agent fable-developer fable
 
 if [ "$failed" -gt 0 ]; then
   echo "FAIL: developer agent functional check failed"
   exit 1
 fi
 
-echo "PASS: sonnet-developer and opus-developer load and report correct configuration"
+echo "PASS: sonnet-developer, opus-developer, and fable-developer load and report correct configuration"
 exit 0

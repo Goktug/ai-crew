@@ -58,6 +58,7 @@ new_files=(
   "skills/mobile-component-testing-with-rntl/SKILL.md"
   "agents/sonnet-developer.md"
   "agents/opus-developer.md"
+  "agents/fable-developer.md"
   "agents/web-researcher.md"
   ".claude/commands/team-lead.md"
   ".claude-plugin/plugin.json"
