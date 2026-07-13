@@ -80,7 +80,7 @@ PROGRESS_PATH="$PROJECT_DIR/progress.md"
 # Verify, Review, then STOP before Ship. Each Build task is dispatched as a
 # Task tool call to the developer subagent.
 PROMPT=$(cat <<EOF
-You are an ai-crew Opus team-lead session. The plugin is loaded from $PLUGIN_DIR.
+You are an ai-crew Fable team-lead session. The plugin is loaded from $PLUGIN_DIR.
 
 This run has pre-prepared artifacts in the current working directory:
   - design.md   (high-level requirement)
